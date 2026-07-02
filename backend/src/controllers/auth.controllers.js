@@ -33,7 +33,7 @@ const registerUser = async (req, res) => {
 
   res.cookie("jwt", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "development",
+    secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -68,7 +68,7 @@ const loginUser = async (req, res) => {
 
   res.cookie("jwt", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "development",
+    secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -78,7 +78,6 @@ const loginUser = async (req, res) => {
     name: user.name,
     email: user.email,
     roles: user.roles,
-    token: generateToken(user._id),
   });
 };
 
@@ -88,5 +87,19 @@ const getMe = async (req, res) => {
   res.status(200).json(req.user); // req.user set by `protect` middleware
 };
 
-const authController = { registerUser, loginUser, getMe };
+// logout user
+const logoutUser = async (req, res) => {
+  res.cookie("jwt", "", {
+    httpOnly: true,
+    expires: new Date(0),
+    secure: process.env.NODE_ENV === "development",
+    sameSite: "strict",
+  });
+
+  res.status(200).json({
+    message: "Logged out successfully",
+  });
+};
+
+const authController = { registerUser, loginUser, getMe, logoutUser };
 export default authController;
