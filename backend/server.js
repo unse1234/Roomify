@@ -1,6 +1,10 @@
-import app from "./src/app.js"
-import connectDB from "./src/config/database.js";
+import dotenv from "dotenv";
+dotenv.config();
+
+const { default: app } = await import("./src/app.js");
+const { default: connectDB } = await import("./src/config/database.js");
+
 connectDB();
-app.listen(3000,()=>{
+app.listen(3000, () => {
     console.log("server is running")
 })
