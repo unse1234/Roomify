@@ -180,7 +180,7 @@ bookingSchema.pre('validate', function (next) {
       this.invalidate('checkIn', 'Check-in date cannot be in the past');
     }
   }
-  next();
+
 });
 
 // ─── Indexes ──────────────────────────────────────────────────────────────────
