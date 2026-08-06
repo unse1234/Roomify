@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { Conversation, Message } from '../models/chat.model.js';
+import { getIO } from '../socket/chat.socket.js';
 
 // Only the two participants of a conversation may read or act on it.
 const assertParticipant = (conversation, userId) => {
@@ -171,6 +172,12 @@ export const sendMessage = async (req, res) => {
     });
 
     await message.populate('sender', 'name avatar');
+
+    // Push to the recipient's personal room and the conversation room —
+    // covers both "inbox open" and "thread open" client states.
+    getIO().to(`user:${recipientId}`).emit('new_message', message);
+    getIO().to(`conversation:${conversationId}`).emit('new_message', message);
+
     return res.status(201).json({ success: true, data: message });
   } catch (error) {
     const status = error.statusCode || 500;
@@ -205,6 +212,11 @@ export const markConversationAsRead = async (req, res) => {
 
     conversation.unreadCounts.set(userId.toString(), 0);
     await conversation.save();
+
+    getIO().to(`conversation:${conversationId}`).emit('conversation_read', {
+      conversationId,
+      readBy: userId,
+    });
 
     return res.status(200).json({ success: true, message: 'Conversation marked as read' });
   } catch (error) {

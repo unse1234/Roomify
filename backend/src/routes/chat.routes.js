@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { protect } from "../middleware/auth.middleware.js";
+import  protect  from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import {
   startConversation,
@@ -8,7 +8,7 @@ import {
   sendMessage,
   markConversationAsRead,
   deleteMessage,
-} from "../controllers/chat.controller.js";
+} from "../controllers/chat.controllers.js";
 import {
   startConversationSchema,
   sendMessageSchema,
