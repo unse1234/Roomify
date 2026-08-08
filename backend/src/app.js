@@ -5,9 +5,16 @@ import propertyRoutes from "./routes/property.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import reviewRoutes from './routes/review.routes.js';
 import chatRoutes from './routes/chat.routes.js';
-
+import cors from "cors";
 const app = express();
-
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(cookieParser());
 app.use(express.json());
 
