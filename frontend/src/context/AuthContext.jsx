@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
 
   // On first load, ask the backend who we are — the httpOnly cookie
   // (if valid) is sent automatically, so this restores the session
-  // without storing anything in localStorage.
+  // without storing anything in localStorage
   useEffect(() => {
     fetchCurrentUser()
       .then((res) => setUser(res.data))
