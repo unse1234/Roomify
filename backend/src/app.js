@@ -7,6 +7,10 @@ import reviewRoutes from './routes/review.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import cors from "cors";
 const app = express();
+app.use(cookieParser());
+app.use(express.json());
+
+
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -15,8 +19,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-app.use(cookieParser());
-app.use(express.json());
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);

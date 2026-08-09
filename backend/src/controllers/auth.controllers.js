@@ -1,3 +1,4 @@
+
 import User from "../models/users.model.js";
 import generateToken from "../utils/generateToken.js";
 
@@ -12,15 +13,17 @@ const registerUser = async (req, res) => {
   }
 
   const existingUser = await User.findOne({ email });
+
   if (existingUser) {
-    res.status(409); // 409 Conflict — more accurate than 400 for "already exists"
+    res.status(409);
     throw new Error("An account with this email already exists");
   }
 
   // SECURITY: never trust the client to assign 'admin' on signup
   const allowedSignupRoles = ["guest", "host"];
+
   const safeRoles = Array.isArray(roles)
-    ? roles.filter((r) => allowedSignupRoles.includes(r))
+    ? roles.filter((role) => allowedSignupRoles.includes(role))
     : undefined;
 
   const user = await User.create({
@@ -29,6 +32,7 @@ const registerUser = async (req, res) => {
     password,
     ...(safeRoles?.length ? { roles: safeRoles } : {}),
   });
+
   const token = generateToken(user._id);
 
   res.cookie("jwt", token, {
@@ -39,10 +43,13 @@ const registerUser = async (req, res) => {
   });
 
   res.status(201).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    roles: user.roles,
+    success: true,
+    data: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      roles: user.roles,
+    },
   });
 };
 
@@ -56,7 +63,8 @@ const loginUser = async (req, res) => {
     throw new Error("Email and password are required");
   }
 
-  // password has select:false on the schema — must explicitly request it
+  // password has select:false on the schema
+  // must explicitly request it
   const user = await User.findOne({ email }).select("+password");
 
   if (!user || !(await user.comparePassword(password))) {
@@ -74,32 +82,46 @@ const loginUser = async (req, res) => {
   });
 
   res.status(200).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    roles: user.roles,
+    success: true,
+    data: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      roles: user.roles,
+    },
   });
 };
 
 // @route   GET /api/auth/me
 // @access  Private
 const getMe = async (req, res) => {
-  res.status(200).json(req.user); // req.user set by `protect` middleware
+  res.status(200).json({
+    success: true,
+    data: req.user,
+  });
 };
 
-// logout user
+// @route   POST /api/auth/logout
+// @access  Public
 const logoutUser = async (req, res) => {
   res.cookie("jwt", "", {
     httpOnly: true,
     expires: new Date(0),
-    secure: process.env.NODE_ENV === "development",
+    secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
   });
 
   res.status(200).json({
+    success: true,
     message: "Logged out successfully",
   });
 };
 
-const authController = { registerUser, loginUser, getMe, logoutUser };
+const authController = {
+  registerUser,
+  loginUser,
+  getMe,
+  logoutUser,
+};
+
 export default authController;

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Home, Menu, User } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
+import UserMenu from './UserMenu.jsx';
 
 const Navbar = () => {
   const { user } = useAuth();
@@ -20,12 +21,7 @@ const Navbar = () => {
         </nav>
 
         {user ? (
-          <div className="flex items-center gap-2 border border-gray-200 rounded-full py-1.5 pl-3 pr-1.5 hover:shadow-sm transition-shadow cursor-pointer">
-            <Menu className="w-4 h-4 text-gray-500" />
-            <span className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center">
-              <User className="w-4 h-4 text-gray-500" />
-            </span>
-          </div>
+          <UserMenu />
         ) : (
           <div className="flex items-center gap-4 text-sm font-medium">
             <Link to="/login" className="text-gray-700 hover:text-gray-900">Log in</Link>
