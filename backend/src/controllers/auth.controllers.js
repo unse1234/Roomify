@@ -36,12 +36,12 @@ const registerUser = async (req, res) => {
   const token = generateToken(user._id);
 
   res.cookie("jwt", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
-
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/",
+});
   res.status(201).json({
     success: true,
     data: {
@@ -75,12 +75,12 @@ const loginUser = async (req, res) => {
   const token = generateToken(user._id);
 
   res.cookie("jwt", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
-
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/",
+});
   res.status(200).json({
     success: true,
     data: {
@@ -105,12 +105,12 @@ const getMe = async (req, res) => {
 // @access  Public
 const logoutUser = async (req, res) => {
   res.cookie("jwt", "", {
-    httpOnly: true,
-    expires: new Date(0),
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  });
-
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  expires: new Date(0),
+  path: "/",
+});
   res.status(200).json({
     success: true,
     message: "Logged out successfully",
