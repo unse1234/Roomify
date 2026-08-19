@@ -24,7 +24,7 @@ export const initializeSocket = (httpServer) => {
   // Reuses the same JWT cookie the REST API already relies on, so
   // there's one source of truth for auth instead of a second token
   // scheme just for sockets.
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     try {
       const rawCookies = socket.handshake.headers.cookie;
       if (!rawCookies) return next(new Error('Authentication required'));
