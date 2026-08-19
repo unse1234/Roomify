@@ -17,6 +17,12 @@ export const AuthProvider = ({ children }) => {
       .finally(() => setIsLoading(false));
   }, []);
 
+  useEffect(() => {
+    const handleAuthExpired = () => setUser(null);
+    window.addEventListener('roomify:auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('roomify:auth-expired', handleAuthExpired);
+  }, []);
+
   const login = async (credentials) => {
     const res = await loginUser(credentials);
     setUser(res.data);
