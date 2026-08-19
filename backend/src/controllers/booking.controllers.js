@@ -1,4 +1,4 @@
-// controllers/booking.controller.js
+﻿// controllers/booking.controller.js
 import mongoose from 'mongoose';
 import Booking  from '../models/booking.model.js';
 import Property from '../models/property.model.js';
@@ -11,9 +11,9 @@ import {
   BOOKING_CONFIG,
 } from '../config/booking.config.js';
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // PRIVATE HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Calculates the number of nights between two dates.
@@ -116,13 +116,13 @@ const BOOKING_POPULATE = [
   { path: 'host',     select: 'name email' },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // CONTROLLERS
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// ─── @route   POST /api/bookings
-// ─── @access  Private — guest
-// ─── @note    Uses MongoDB transaction for atomic conflict-check + create.
+// â”€â”€â”€ @route   POST /api/bookings
+// â”€â”€â”€ @access  Private â€” guest
+// â”€â”€â”€ @note    Uses MongoDB transaction for atomic conflict-check + create.
 //              Without a transaction, two concurrent requests could both pass
 //              the conflict check and create overlapping bookings (race condition).
 export const createBooking = async (req, res) => {
@@ -131,7 +131,7 @@ export const createBooking = async (req, res) => {
   const checkInDate  = new Date(checkIn);
   const checkOutDate = new Date(checkOut);
 
-  // ── Fetch & validate property ──────────────────────────────────────────────
+  // â”€â”€ Fetch & validate property â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const property = await Property.findById(propertyId).lean();
 
   if (!property) {
@@ -164,7 +164,7 @@ export const createBooking = async (req, res) => {
     });
   }
 
-  // ── Atomic conflict check + booking creation via transaction ───────────────
+  // â”€â”€ Atomic conflict check + booking creation via transaction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // A session-based transaction ensures no two bookings for the same dates
   // are created concurrently (race condition prevention).
   const session = await mongoose.startSession();
@@ -222,7 +222,7 @@ export const createBooking = async (req, res) => {
 
     await session.commitTransaction();
 
-    // Populate after commit — no need to hold the transaction open during populate
+    // Populate after commit â€” no need to hold the transaction open during populate
     await booking.populate(BOOKING_POPULATE);
 
     return res.status(201).json({ success: true, data: booking });
@@ -234,12 +234,12 @@ export const createBooking = async (req, res) => {
   }
 };
 
-// ─── @route   GET /api/bookings/check-availability
-// ─── @access  Public
+// â”€â”€â”€ @route   GET /api/bookings/check-availability
+// â”€â”€â”€ @access  Public
 export const checkAvailability = async (req, res) => {
   const { propertyId, checkIn, checkOut } = req.validated.query;
 
-  // Property existence check — lightweight
+  // Property existence check â€” lightweight
   const propertyExists = await Property.exists({ _id: propertyId, status: 'active' });
   if (!propertyExists) {
     return res.status(404).json({ success: false, message: 'Property not found' });
@@ -260,8 +260,8 @@ export const checkAvailability = async (req, res) => {
   });
 };
 
-// ─── @route   GET /api/bookings/my-bookings
-// ─── @access  Private — guest
+// â”€â”€â”€ @route   GET /api/bookings/my-bookings
+// â”€â”€â”€ @access  Private â€” guest
 export const getMyBookings = async (req, res) => {
   const { page, limit, status } = req.query;
 
@@ -291,8 +291,8 @@ export const getMyBookings = async (req, res) => {
   });
 };
 
-// ─── @route   GET /api/bookings/host-bookings
-// ─── @access  Private — host
+// â”€â”€â”€ @route   GET /api/bookings/host-bookings
+// â”€â”€â”€ @access  Private â€” host
 export const getHostBookings = async (req, res) => {
   const { page, limit, status } = req.query;
 
@@ -322,8 +322,8 @@ export const getHostBookings = async (req, res) => {
   });
 };
 
-// ─── @route   GET /api/bookings/:id
-// ─── @access  Private — guest, host, admin
+// â”€â”€â”€ @route   GET /api/bookings/:id
+// â”€â”€â”€ @access  Private â€” guest, host, admin
 export const getBookingById = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid booking ID' });
@@ -334,9 +334,7 @@ export const getBookingById = async (req, res) => {
   if (!booking) {
     return res.status(404).json({ success: false, message: 'Booking not found' });
   }
-console.log("Authenticated User:", req.user);
-console.log("Booking Host:", booking.host.toString());
-console.log("Authenticated User ID:", req.user?._id?.toString());
+
   if (!isParticipant(booking, req.user)) {
     return res.status(403).json({
       success: false,
@@ -347,9 +345,9 @@ console.log("Authenticated User ID:", req.user?._id?.toString());
   return res.status(200).json({ success: true, data: booking });
 };
 
-// ─── @route   PATCH /api/bookings/:id/confirm
-// ─── @access  Private — host
-// ─── @note    Re-checks for conflicts inside a transaction before confirming.
+// â”€â”€â”€ @route   PATCH /api/bookings/:id/confirm
+// â”€â”€â”€ @access  Private â€” host
+// â”€â”€â”€ @note    Re-checks for conflicts inside a transaction before confirming.
 //              Handles the race condition where two hosts try to confirm
 //              overlapping bookings for the same property simultaneously.
 export const confirmBooking = async (req, res) => {
@@ -377,7 +375,7 @@ export const confirmBooking = async (req, res) => {
     });
   }
 
-  // ── Transaction-safe confirmation ──────────────────────────────────────────
+  // â”€â”€ Transaction-safe confirmation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const session = await mongoose.startSession();
 
   try {
@@ -396,7 +394,7 @@ export const confirmBooking = async (req, res) => {
       await session.abortTransaction();
       return res.status(409).json({
         success: false,
-        message: 'These dates are no longer available — another booking was confirmed first',
+        message: 'These dates are no longer available â€” another booking was confirmed first',
       });
     }
 
@@ -414,8 +412,8 @@ export const confirmBooking = async (req, res) => {
   }
 };
 
-// ─── @route   PATCH /api/bookings/:id/cancel
-// ─── @access  Private — guest, host, admin
+// â”€â”€â”€ @route   PATCH /api/bookings/:id/cancel
+// â”€â”€â”€ @access  Private â€” guest, host, admin
 export const cancelBooking = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid booking ID' });
@@ -449,7 +447,7 @@ export const cancelBooking = async (req, res) => {
     cancelledBy,
     reason:      reason ?? null,
     cancelledAt: new Date(),
-    // ── Stripe integration point ───────────────────────────────────────────
+    // â”€â”€ Stripe integration point â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // When Stripe is added:
     // 1. Call stripe.refunds.create({ payment_intent: booking.paymentIntentId })
     // 2. Store result.id in refundId and result.amount in refundAmount
@@ -461,7 +459,7 @@ export const cancelBooking = async (req, res) => {
   // Mark for refund if payment was already captured
   if (booking.paymentStatus === PAYMENT_STATUS.PAID) {
     booking.paymentStatus = PAYMENT_STATUS.REFUNDED;
-    // TODO: trigger Stripe refund here
+    // Stripe refund trigger will live here when payments are integrated.
   }
 
   await booking.save();
@@ -469,9 +467,9 @@ export const cancelBooking = async (req, res) => {
   return res.status(200).json({ success: true, data: booking });
 };
 
-// ─── @route   PATCH /api/bookings/:id/complete
-// ─── @access  Private — admin
-// ─── @note    In production this should be triggered by a scheduled cron job
+// â”€â”€â”€ @route   PATCH /api/bookings/:id/complete
+// â”€â”€â”€ @access  Private â€” admin
+// â”€â”€â”€ @note    In production this should be triggered by a scheduled cron job
 //              (e.g. node-cron) that runs at midnight and auto-completes all
 //              confirmed bookings where checkOut < now.
 //              This manual route exists for admin overrides and testing.
