@@ -51,41 +51,46 @@ export const createProperty = async (req, res) => {
 
   const images = await uploadImagesToImageKit(req.files);
 
-  const {
-    title,
-    description,
-    type,
-    price,
-    currency,
-    bedrooms,
-    bathrooms,
-    maxGuests,
-  } = req.body;
+  try {
+    const {
+      title,
+      description,
+      type,
+      price,
+      currency,
+      bedrooms,
+      bathrooms,
+      maxGuests,
+    } = req.body;
 
-  const area = req.body.area ? JSON.parse(req.body.area) : undefined;
-  const address = req.body.address ? JSON.parse(req.body.address) : undefined;
-  const amenities = req.body.amenities ? JSON.parse(req.body.amenities) : [];
+    const area = req.body.area ? JSON.parse(req.body.area) : undefined;
+    const address = req.body.address ? JSON.parse(req.body.address) : undefined;
+    const amenities = req.body.amenities ? JSON.parse(req.body.amenities) : [];
 
-  const property = await Property.create({
-    title,
-    description,
-    type,
-    price,
-    currency,
-    bedrooms,
-    bathrooms,
-    area,
-    maxGuests,
-    amenities,
-    address,
-    images,
-    host: req.user._id,
-  });
+    const property = await Property.create({
+      title,
+      description,
+      type,
+      price,
+      currency,
+      bedrooms,
+      bathrooms,
+      area,
+      maxGuests,
+      amenities,
+      address,
+      images,
+      host: req.user._id,
+    });
 
-  res.status(201).json({
-    success: true,
-    data: property,
-  });
+    res.status(201).json({
+      success: true,
+      data: property,
+    });
+  } catch (error) {
+    cleanupImages(images, 'property_image_upload_cleanup_failed', req.user._id);
+    throw error;
+  }
 };
 
 export const getAllProperties = async (req, res) => {
