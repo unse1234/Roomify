@@ -39,7 +39,10 @@ const ConversationPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: deleteMessage,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['messages', conversationId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
   });
 
   const messages = [...(messagesQuery.data?.data || [])].reverse();

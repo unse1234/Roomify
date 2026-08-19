@@ -8,19 +8,25 @@ export const useChatSocket = (conversationId) => {
   const [status, setStatus] = useState(isRealtimeChatEnabled ? 'connecting' : 'disabled');
 
   useEffect(() => {
-    if (!isRealtimeChatEnabled || !conversationId) return undefined;
+    if (!isRealtimeChatEnabled) return undefined;
 
     const socket = createChatSocket();
     socketRef.current = socket;
 
     socket.on('connect', () => {
       setStatus('connected');
-      socket.emit('join_conversation', conversationId);
+      if (conversationId) socket.emit('join_conversation', conversationId);
     });
     socket.on('disconnect', () => setStatus('disconnected'));
     socket.on('connect_error', () => setStatus('error'));
     socket.on('new_message', () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      if (conversationId) queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    });
+    socket.on('message_deleted', (event) => {
+      if (event?.conversationId === conversationId) {
+        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      }
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     });
     socket.on('conversation_read', () => queryClient.invalidateQueries({ queryKey: ['conversations'] }));
@@ -28,7 +34,7 @@ export const useChatSocket = (conversationId) => {
     socket.connect();
 
     return () => {
-      socket.emit('leave_conversation', conversationId);
+      if (conversationId) socket.emit('leave_conversation', conversationId);
       socket.disconnect();
     };
   }, [conversationId, queryClient]);

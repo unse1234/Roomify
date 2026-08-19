@@ -269,6 +269,7 @@ export const deleteMessage = async (req, res) => {
     const { messageId } = req.params;
     let deletedMessage;
     let latestMessage;
+    let participantIds;
 
     await session.withTransaction(async () => {
       const message = await Message.findById(messageId).session(session);
@@ -285,6 +286,7 @@ export const deleteMessage = async (req, res) => {
         throw error;
       }
       assertParticipant(conversation, userId);
+      participantIds = conversation.participants.map((participant) => participant.toString());
 
       if (message.sender.toString() !== userId.toString()) {
         const error = new Error('Not authorized to delete this message');
@@ -305,7 +307,7 @@ export const deleteMessage = async (req, res) => {
     });
 
     const conversationId = deletedMessage.conversation.toString();
-    getIO().to(`user:${userId}`).emit('message_deleted', {
+    const deletionEvent = {
       messageId: deletedMessage._id,
       conversationId,
       lastMessage: latestMessage
@@ -315,6 +317,9 @@ export const deleteMessage = async (req, res) => {
             sentAt: latestMessage.createdAt,
           }
         : { content: '', sender: null, sentAt: null },
+    };
+    participantIds.forEach((participantId) => {
+      getIO().to(`user:${participantId}`).emit('message_deleted', deletionEvent);
     });
     getIO().to(`conversation:${conversationId}`).emit('message_deleted', {
       messageId: deletedMessage._id,

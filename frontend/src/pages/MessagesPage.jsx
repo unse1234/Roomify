@@ -6,8 +6,10 @@ import { getConversations } from '../services/chat.service.js';
 import { EmptyState, ErrorState, PageShell, SkeletonBlock } from '../components/common/StateViews.jsx';
 import { formatDate, getCoverImage } from '../utils/formatters.js';
 import { getApiErrorMessage, getApiErrorRequestId } from '../utils/apiError.js';
+import { useChatSocket } from '../hooks/useChatSocket.js';
 
 const MessagesPage = () => {
+  useChatSocket();
   const conversationsQuery = useQuery({
     queryKey: ['conversations'],
     queryFn: getConversations,
