@@ -18,5 +18,11 @@ initializeSocket(httpServer);
 const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level: "info",
+    event: "server_started",
+    port: PORT,
+    environment: process.env.NODE_ENV || "development",
+  }));
 });

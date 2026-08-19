@@ -1,32 +1,27 @@
 import jwt from "jsonwebtoken";
 import User from "../models/users.model.js";
+import { unauthenticated } from "../errors/AppError.js";
+import { ERROR_CODES } from "../errors/errorCodes.js";
 
 const protect = async (req, res, next) => {
-  // Read JWT from cookie
   const token = req.cookies.jwt;
 
-  // No token found
   if (!token) {
-    res.status(401);
-    throw new Error("Not authorized, no token");
+    return next(unauthenticated("Please sign in to continue.", ERROR_CODES.AUTH_UNAUTHORIZED));
   }
 
   try {
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Find user
     req.user = await User.findById(decoded.id);
 
     if (!req.user) {
-      res.status(401);
-      throw new Error("User no longer exists");
+      return next(unauthenticated("Your session has expired. Please sign in again.", ERROR_CODES.AUTH_SESSION_EXPIRED));
     }
 
-    next();
+    return next();
   } catch (error) {
-    res.status(401);
-    throw new Error("Not authorized, token failed");
+    return next(unauthenticated("Your session has expired. Please sign in again.", ERROR_CODES.AUTH_SESSION_EXPIRED));
   }
 };
 
