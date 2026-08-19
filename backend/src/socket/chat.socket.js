@@ -1,6 +1,8 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import * as cookie from 'cookie';
+import User from '../models/users.model.js';
+import { Conversation } from '../models/chat.model.js';
 import { logger } from '../utils/logger.js';
 let io;
 
@@ -14,7 +16,7 @@ const getConversationId = (payload) =>
 export const initializeSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL,
+      origin: process.env.FRONTEND_URL || process.env.CLIENT_URL,
       credentials: true,
     },
   });
@@ -31,7 +33,10 @@ export const initializeSocket = (httpServer) => {
       if (!token) return next(new Error('Authentication required'));
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.userId = decoded.id;
+      const user = await User.findById(decoded.id).select('_id').lean();
+      if (!user) return next(new Error('Authentication failed'));
+
+      socket.userId = user._id.toString();
       next();
     } catch (error) {
       logger.warn('socket_auth_failed', {
@@ -43,13 +48,39 @@ export const initializeSocket = (httpServer) => {
   });
 
   io.on('connection', (socket) => {
+    const authorizedConversations = new Set();
+
     // Personal room — lets any controller notify this exact user
     // directly, without needing to know which conversation room
     // (if any) they currently have open.
     socket.join(`user:${socket.userId}`);
 
-    socket.on('join_conversation', (conversationId) => {
-      socket.join(`conversation:${conversationId}`);
+    socket.on('join_conversation', async (conversationId, acknowledge) => {
+      try {
+        const conversation = await Conversation.findById(conversationId)
+          .select('participants')
+          .lean();
+        const isParticipant = conversation?.participants.some(
+          (participantId) => participantId.toString() === socket.userId
+        );
+
+        if (!isParticipant) {
+          acknowledge?.({ success: false, message: 'Not authorized to access this conversation' });
+          return;
+        }
+
+        authorizedConversations.add(conversationId.toString());
+        socket.join(`conversation:${conversationId}`);
+        acknowledge?.({ success: true });
+      } catch (error) {
+        logger.warn('socket_conversation_join_failed', {
+          conversationId,
+          userId: socket.userId,
+          errorName: error.name,
+          errorMessage: error.message,
+        });
+        acknowledge?.({ success: false, message: 'Unable to join conversation' });
+      }
     });
 
     socket.on('leave_conversation', (conversationId) => {
@@ -58,7 +89,7 @@ export const initializeSocket = (httpServer) => {
 
     socket.on('typing_start', (payload) => {
       const conversationId = getConversationId(payload);
-      if (!conversationId) return;
+      if (!conversationId || !authorizedConversations.has(conversationId.toString())) return;
       socket.to(`conversation:${conversationId}`).emit('typing_start', {
         conversationId,
         userId: socket.userId,
@@ -67,7 +98,7 @@ export const initializeSocket = (httpServer) => {
 
     socket.on('typing_stop', (payload) => {
       const conversationId = getConversationId(payload);
-      if (!conversationId) return;
+      if (!conversationId || !authorizedConversations.has(conversationId.toString())) return;
       socket.to(`conversation:${conversationId}`).emit('typing_stop', {
         conversationId,
         userId: socket.userId,
