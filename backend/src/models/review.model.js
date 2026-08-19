@@ -115,7 +115,7 @@ reviewSchema.index({ reviewer: 1 });
 // property's averageRating and totalReviews (denormalized fields)
 // This keeps property listing data fresh without expensive aggregation on every fetch
 
-const recalculatePropertyRating = async (propertyId) => {
+export const recalculatePropertyRating = async (propertyId) => {
   const result = await mongoose.model('Review').aggregate([
     {
       $match: {

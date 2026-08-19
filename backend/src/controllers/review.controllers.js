@@ -1,6 +1,6 @@
 // controllers/review.controllers.js
 import mongoose from 'mongoose';
-import Review   from '../models/review.model.js';
+import Review, { recalculatePropertyRating } from '../models/review.model.js';
 import Booking  from '../models/booking.model.js';
 import Property from '../models/property.model.js';
 import { BOOKING_STATUS } from '../config/booking.config.js';
@@ -338,14 +338,24 @@ export const deleteReview = async (req, res) => {
     });
   }
 
-  // Flip isReviewed flag back so guest can re-submit if they choose
-  await Booking.findByIdAndUpdate(
-    review.booking,
-    { $set: { isReviewed: false } }
-  );
+  const session = await mongoose.startSession();
 
-  // Triggers post-deleteOne hook → recalculates property averageRating
-  await review.deleteOne();
+  try {
+    await session.withTransaction(async () => {
+      await Booking.findByIdAndUpdate(
+        review.booking,
+        { $set: { isReviewed: false } },
+        { session },
+      );
+
+      await Review.deleteOne({ _id: review._id }, { session });
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  // Recalculate after commit so the aggregation sees the deleted review.
+  await recalculatePropertyRating(review.property);
 
   return res.status(200).json({
     success: true,
