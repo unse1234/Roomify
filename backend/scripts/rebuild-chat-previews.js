@@ -1,12 +1,12 @@
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
-import connectDB from '../src/config/database.js';
-import { Conversation, Message } from '../src/models/chat.model.js';
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+import connectDB from "../src/config/database.js";
+import { Conversation, Message } from "../src/models/chat.model.js";
 
 dotenv.config();
 
 const emptyPreview = {
-  content: '',
+  content: "",
   sender: null,
   sentAt: null,
 };
@@ -26,10 +26,10 @@ const rebuildChatPreviews = async () => {
     { $sort: { conversation: 1, createdAt: -1, _id: -1 } },
     {
       $group: {
-        _id: '$conversation',
-        content: { $first: '$content' },
-        sender: { $first: '$sender' },
-        sentAt: { $first: '$createdAt' },
+        _id: "$conversation",
+        content: { $first: "$content" },
+        sender: { $first: "$sender" },
+        sentAt: { $first: "$createdAt" },
       },
     },
   ]);

@@ -1,14 +1,14 @@
-import mongoose from 'mongoose';
-import { Conversation, Message } from '../models/chat.model.js';
-import { getIO } from '../socket/chat.socket.js';
+import mongoose from "mongoose";
+import { Conversation, Message } from "../models/chat.model.js";
+import { getIO } from "../socket/chat.socket.js";
 
 // Only the two participants of a conversation may read or act on it.
 const assertParticipant = (conversation, userId) => {
   const isParticipant = conversation.participants.some(
-    (p) => p.toString() === userId.toString()
+    (p) => p.toString() === userId.toString(),
   );
   if (!isParticipant) {
-    const error = new Error('Not authorized to access this conversation');
+    const error = new Error("Not authorized to access this conversation");
     error.statusCode = 403;
     throw error;
   }
@@ -30,7 +30,7 @@ const rebuildConversationPreview = async (conversationId, session) => {
         sentAt: latestMessage.createdAt,
       }
     : {
-        content: '',
+        content: "",
         sender: null,
         sentAt: null,
       };
@@ -55,13 +55,16 @@ export const startConversation = async (req, res) => {
     const { recipientId, propertyId = null } = req.body;
 
     if (!recipientId) {
-      return res.status(400).json({ success: false, message: 'recipientId is required' });
+      return res
+        .status(400)
+        .json({ success: false, message: "recipientId is required" });
     }
 
     if (String(recipientId) === String(senderId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Cannot start a conversation with yourself' });
+      return res.status(400).json({
+        success: false,
+        message: "Cannot start a conversation with yourself",
+      });
     }
 
     // Sorted so the same pair always maps to the same array value,
@@ -71,10 +74,10 @@ export const startConversation = async (req, res) => {
     const conversation = await Conversation.findOneAndUpdate(
       { participants, property: propertyId },
       { $setOnInsert: { participants, property: propertyId } },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      { new: true, upsert: true, setDefaultsOnInsert: true },
     )
-      .populate('participants', 'name avatar')
-      .populate('property', 'title images');
+      .populate("participants", "name avatar")
+      .populate("property", "title images");
 
     return res.status(200).json({ success: true, data: conversation });
   } catch (error) {
@@ -85,14 +88,19 @@ export const startConversation = async (req, res) => {
       const { recipientId, propertyId = null } = req.body;
       const participants = [String(senderId), String(recipientId)].sort();
 
-      const existing = await Conversation.findOne({ participants, property: propertyId })
-        .populate('participants', 'name avatar')
-        .populate('property', 'title images');
+      const existing = await Conversation.findOne({
+        participants,
+        property: propertyId,
+      })
+        .populate("participants", "name avatar")
+        .populate("property", "title images");
 
       return res.status(200).json({ success: true, data: existing });
     }
 
-    return res.status(500).json({ success: false, message: 'Failed to start conversation' });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to start conversation" });
   }
 };
 
@@ -107,8 +115,8 @@ export const getMyConversations = async (req, res) => {
 
     const conversations = await Conversation.find({ participants: userId })
       .sort({ updatedAt: -1 })
-      .populate('participants', 'name avatar')
-      .populate('property', 'title images')
+      .populate("participants", "name avatar")
+      .populate("property", "title images")
       .lean();
 
     const data = conversations.map(({ unreadCounts, ...conv }) => ({
@@ -118,7 +126,9 @@ export const getMyConversations = async (req, res) => {
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch conversations' });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch conversations" });
   }
 };
 
@@ -135,7 +145,9 @@ export const getMessages = async (req, res) => {
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-      return res.status(404).json({ success: false, message: 'Conversation not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found" });
     }
     assertParticipant(conversation, userId);
 
@@ -145,14 +157,15 @@ export const getMessages = async (req, res) => {
     const messages = await Message.find(query)
       .sort({ createdAt: -1 })
       .limit(Math.min(Number(limit), 50))
-      .populate('sender', 'name avatar');
+      .populate("sender", "name avatar");
 
     return res.status(200).json({ success: true, data: messages });
   } catch (error) {
     const status = error.statusCode || 500;
-    return res
-      .status(status)
-      .json({ success: false, message: error.message || 'Failed to fetch messages' });
+    return res.status(status).json({
+      success: false,
+      message: error.message || "Failed to fetch messages",
+    });
   }
 };
 
@@ -170,28 +183,39 @@ export const sendMessage = async (req, res) => {
     const { content } = req.body;
 
     if (!content?.trim()) {
-      return res.status(400).json({ success: false, message: 'Message content is required' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Message content is required" });
     }
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-      return res.status(404).json({ success: false, message: 'Conversation not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found" });
     }
     assertParticipant(conversation, senderId);
 
     const recipientId = conversation.participants.find(
-      (p) => p.toString() !== senderId.toString()
+      (p) => p.toString() !== senderId.toString(),
     );
 
     let message;
     await session.withTransaction(async () => {
       const created = await Message.create(
-        [{ conversation: conversationId, sender: senderId, content: content.trim() }],
-        { session }
+        [
+          {
+            conversation: conversationId,
+            sender: senderId,
+            content: content.trim(),
+          },
+        ],
+        { session },
       );
       message = created[0];
 
-      const currentUnread = conversation.unreadCounts.get(recipientId.toString()) || 0;
+      const currentUnread =
+        conversation.unreadCounts.get(recipientId.toString()) || 0;
       conversation.unreadCounts.set(recipientId.toString(), currentUnread + 1);
       conversation.lastMessage = {
         content: message.content,
@@ -201,19 +225,20 @@ export const sendMessage = async (req, res) => {
       await conversation.save({ session });
     });
 
-    await message.populate('sender', 'name avatar');
+    await message.populate("sender", "name avatar");
 
     // Push to the recipient's personal room and the conversation room —
     // covers both "inbox open" and "thread open" client states.
-    getIO().to(`user:${recipientId}`).emit('new_message', message);
-    getIO().to(`conversation:${conversationId}`).emit('new_message', message);
+    getIO().to(`user:${recipientId}`).emit("new_message", message);
+    getIO().to(`conversation:${conversationId}`).emit("new_message", message);
 
     return res.status(201).json({ success: true, data: message });
   } catch (error) {
     const status = error.statusCode || 500;
-    return res
-      .status(status)
-      .json({ success: false, message: error.message || 'Failed to send message' });
+    return res.status(status).json({
+      success: false,
+      message: error.message || "Failed to send message",
+    });
   } finally {
     session.endSession();
   }
@@ -231,29 +256,34 @@ export const markConversationAsRead = async (req, res) => {
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-      return res.status(404).json({ success: false, message: 'Conversation not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found" });
     }
     assertParticipant(conversation, userId);
 
     await Message.updateMany(
       { conversation: conversationId, sender: { $ne: userId }, isRead: false },
-      { $set: { isRead: true, readAt: new Date() } }
+      { $set: { isRead: true, readAt: new Date() } },
     );
 
     conversation.unreadCounts.set(userId.toString(), 0);
     await conversation.save();
 
-    getIO().to(`conversation:${conversationId}`).emit('conversation_read', {
+    getIO().to(`conversation:${conversationId}`).emit("conversation_read", {
       conversationId,
       readBy: userId,
     });
 
-    return res.status(200).json({ success: true, message: 'Conversation marked as read' });
+    return res
+      .status(200)
+      .json({ success: true, message: "Conversation marked as read" });
   } catch (error) {
     const status = error.statusCode || 500;
-    return res
-      .status(status)
-      .json({ success: false, message: error.message || 'Failed to mark as read' });
+    return res.status(status).json({
+      success: false,
+      message: error.message || "Failed to mark as read",
+    });
   }
 };
 
@@ -274,28 +304,32 @@ export const deleteMessage = async (req, res) => {
     await session.withTransaction(async () => {
       const message = await Message.findById(messageId).session(session);
       if (!message) {
-        const error = new Error('Message not found');
+        const error = new Error("Message not found");
         error.statusCode = 404;
         throw error;
       }
 
-      const conversation = await Conversation.findById(message.conversation).session(session);
+      const conversation = await Conversation.findById(
+        message.conversation,
+      ).session(session);
       if (!conversation) {
-        const error = new Error('Conversation not found');
+        const error = new Error("Conversation not found");
         error.statusCode = 404;
         throw error;
       }
       assertParticipant(conversation, userId);
-      participantIds = conversation.participants.map((participant) => participant.toString());
+      participantIds = conversation.participants.map((participant) =>
+        participant.toString(),
+      );
 
       if (message.sender.toString() !== userId.toString()) {
-        const error = new Error('Not authorized to delete this message');
+        const error = new Error("Not authorized to delete this message");
         error.statusCode = 403;
         throw error;
       }
 
       if (message.isDeleted) {
-        const error = new Error('Message has already been deleted');
+        const error = new Error("Message has already been deleted");
         error.statusCode = 404;
         throw error;
       }
@@ -303,7 +337,10 @@ export const deleteMessage = async (req, res) => {
       message.isDeleted = true;
       await message.save({ session });
       deletedMessage = message;
-      latestMessage = await rebuildConversationPreview(message.conversation, session);
+      latestMessage = await rebuildConversationPreview(
+        message.conversation,
+        session,
+      );
     });
 
     const conversationId = deletedMessage.conversation.toString();
@@ -316,27 +353,30 @@ export const deleteMessage = async (req, res) => {
             sender: latestMessage.sender,
             sentAt: latestMessage.createdAt,
           }
-        : { content: '', sender: null, sentAt: null },
+        : { content: "", sender: null, sentAt: null },
     };
     participantIds.forEach((participantId) => {
-      getIO().to(`user:${participantId}`).emit('message_deleted', deletionEvent);
+      getIO()
+        .to(`user:${participantId}`)
+        .emit("message_deleted", deletionEvent);
     });
-    getIO().to(`conversation:${conversationId}`).emit('message_deleted', {
+    getIO().to(`conversation:${conversationId}`).emit("message_deleted", {
       messageId: deletedMessage._id,
       conversationId,
     });
 
     return res.status(200).json({
       success: true,
-      message: 'Message deleted',
+      message: "Message deleted",
       conversationId,
       lastMessage: latestMessage,
     });
   } catch (error) {
     const status = error.statusCode || 500;
-    return res
-      .status(status)
-      .json({ success: false, message: error.message || 'Failed to delete message' });
+    return res.status(status).json({
+      success: false,
+      message: error.message || "Failed to delete message",
+    });
   } finally {
     await session.endSession();
   }
