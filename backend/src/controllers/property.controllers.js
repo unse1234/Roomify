@@ -1,21 +1,48 @@
-// controllers/property.controller.js
+﻿// controllers/property.controller.js
 import Property, {
   PROPERTY_TYPES,
   PROPERTY_STATUS,
 } from "../models/property.model.js";
+import User from "../models/users.model.js";
 import {
   uploadImagesToImageKit,
   deleteImagesFromImageKit,
 } from "../utils/imagekit.utils.js";
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const isOwnerOrAdmin = (property, user) => {
-  return (
-    property.host.toString() === user._id.toString() || user.hasRole("admin")
-  );
+import { logger } from "../utils/logger.js";
+
+const isOwnerOrAdmin = (property, user) => (
+  property.host.toString() === user._id.toString() || user.hasRole("admin")
+);
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const parseMaybeJson = (value) => {
+  if (typeof value !== "string") return value;
+  return JSON.parse(value);
 };
 
-// ─── @route   POST /api/properties
-// ─── @access  Private (host only)
+const buildPropertyUpdate = (body) => {
+  const update = { ...body };
+  ["host", "averageRating", "totalReviews", "status", "images"].forEach((field) => delete update[field]);
+
+  if (update.area) update.area = parseMaybeJson(update.area);
+  if (update.address) update.address = parseMaybeJson(update.address);
+  if (update.amenities) update.amenities = parseMaybeJson(update.amenities);
+
+  return update;
+};
+
+const cleanupImages = (images, event, propertyId) => {
+  if (!images?.length) return;
+
+  deleteImagesFromImageKit(images).catch((error) => {
+    logger.warn(event, {
+      propertyId: propertyId?.toString(),
+      errorName: error.name,
+      errorMessage: error.message,
+    });
+  });
+};
 
 export const createProperty = async (req, res) => {
   if (!req.files || req.files.length === 0) {
@@ -35,16 +62,9 @@ export const createProperty = async (req, res) => {
     maxGuests,
   } = req.body;
 
-  // Parse JSON fields sent as strings
   const area = req.body.area ? JSON.parse(req.body.area) : undefined;
-
-  const address = req.body.address
-    ? JSON.parse(req.body.address)
-    : undefined;
-
-  const amenities = req.body.amenities
-    ? JSON.parse(req.body.amenities)
-    : [];
+  const address = req.body.address ? JSON.parse(req.body.address) : undefined;
+  const amenities = req.body.amenities ? JSON.parse(req.body.amenities) : [];
 
   const property = await Property.create({
     title,
@@ -67,8 +87,7 @@ export const createProperty = async (req, res) => {
     data: property,
   });
 };
-// ─── @route   GET /api/properties
-// ─── @access  Public
+
 export const getAllProperties = async (req, res) => {
   const {
     lng,
@@ -85,9 +104,20 @@ export const getAllProperties = async (req, res) => {
     page = 1,
     limit = 12,
     sort = "-createdAt",
+    q,
   } = req.query;
 
   const filter = { status: "active" };
+
+  if (q?.trim()) {
+    const search = new RegExp(escapeRegex(q.trim()), "i");
+    filter.$or = [
+      { title: search },
+      { "address.city": search },
+      { "address.state": search },
+      { "address.country": search },
+    ];
+  }
 
   if (type && PROPERTY_TYPES.includes(type)) filter.type = type;
 
@@ -108,7 +138,8 @@ export const getAllProperties = async (req, res) => {
   }
 
   const skip = (Number(page) - 1) * Number(limit);
-  let properties, total;
+  let properties;
+  let total;
 
   if (lng && lat) {
     const pipeline = [
@@ -150,8 +181,6 @@ export const getAllProperties = async (req, res) => {
   });
 };
 
-// ─── @route   GET /api/properties/:id
-// ─── @access  Public
 export const getPropertyById = async (req, res) => {
   const property = await Property.findById(req.params.id)
     .populate("host", "name email")
@@ -164,8 +193,6 @@ export const getPropertyById = async (req, res) => {
   res.status(200).json({ success: true, data: property });
 };
 
-// ─── @route   PATCH /api/properties/:id
-// ─── @access  Private (owner host or admin)
 export const updateProperty = async (req, res) => {
   const property = await Property.findById(req.params.id);
 
@@ -174,25 +201,30 @@ export const updateProperty = async (req, res) => {
   }
 
   if (!isOwnerOrAdmin(property, req.user)) {
-    return res
-      .status(403)
-      .json({ message: "Not authorized to update this property" });
+    return res.status(403).json({ message: "Not authorized to update this property" });
   }
 
-  const disallowedFields = ["host", "averageRating", "totalReviews", "status"];
-  disallowedFields.forEach((field) => delete req.body[field]);
+  const update = buildPropertyUpdate(req.body);
+  let replacementImages = null;
+
+  if (req.files?.length) {
+    replacementImages = await uploadImagesToImageKit(req.files);
+    update.images = replacementImages;
+  }
 
   const updated = await Property.findByIdAndUpdate(
     req.params.id,
-    { $set: req.body },
+    { $set: update },
     { new: true, runValidators: true },
   );
+
+  if (replacementImages) {
+    cleanupImages(property.images, "property_old_image_cleanup_failed", property._id);
+  }
 
   res.status(200).json({ success: true, data: updated });
 };
 
-// ─── @route   PATCH /api/properties/:id/status
-// ─── @access  Private (admin only)
 export const updatePropertyStatus = async (req, res) => {
   const { status } = req.body;
 
@@ -215,8 +247,6 @@ export const updatePropertyStatus = async (req, res) => {
   res.status(200).json({ success: true, data: property });
 };
 
-// ─── @route   DELETE /api/properties/:id
-// ─── @access  Private (owner host or admin)
 export const deleteProperty = async (req, res) => {
   const property = await Property.findById(req.params.id);
 
@@ -225,29 +255,63 @@ export const deleteProperty = async (req, res) => {
   }
 
   if (!isOwnerOrAdmin(property, req.user)) {
-    return res
-      .status(403)
-      .json({ message: "Not authorized to delete this property" });
+    return res.status(403).json({ message: "Not authorized to delete this property" });
   }
 
   await property.deleteOne();
+  cleanupImages(property.images, "property_image_cleanup_failed", property._id);
 
-  // TODO: Cloudinary image cleanup when integrated
-  // property.images.forEach(img => cloudinary.uploader.destroy(img.publicId))
-
-  res
-    .status(200)
-    .json({ success: true, message: "Property deleted successfully" });
+  res.status(200).json({ success: true, message: "Property deleted successfully" });
 };
 
-// ─── @route   GET /api/properties/host/my-properties
-// ─── @access  Private (host only)
 export const getHostProperties = async (req, res) => {
   const properties = await Property.find({ host: req.user._id })
     .sort("-createdAt")
     .lean();
 
-  res
-    .status(200)
-    .json({ success: true, count: properties.length, data: properties });
+  res.status(200).json({ success: true, count: properties.length, data: properties });
+};
+
+export const getWishlist = async (req, res) => {
+  const user = await User.findById(req.user._id)
+    .populate({
+      path: "wishlist",
+      match: { status: "active" },
+      populate: { path: "host", select: "name email" },
+    })
+    .lean();
+
+  const wishlist = user?.wishlist || [];
+
+  res.status(200).json({
+    success: true,
+    count: wishlist.length,
+    data: wishlist,
+  });
+};
+
+export const toggleWishlist = async (req, res) => {
+  const property = await Property.findById(req.params.id).select("_id status").lean();
+
+  if (!property || property.status !== "active") {
+    return res.status(404).json({ message: "Property not found" });
+  }
+
+  const user = await User.findById(req.user._id).select("wishlist");
+  const propertyId = property._id.toString();
+  const exists = user.wishlist.some((id) => id.toString() === propertyId);
+
+  if (exists) {
+    user.wishlist = user.wishlist.filter((id) => id.toString() !== propertyId);
+  } else {
+    user.wishlist.push(property._id);
+  }
+
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    wishlisted: !exists,
+    data: user.wishlist,
+  });
 };

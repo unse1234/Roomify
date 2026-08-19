@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import {
   createProperty,
   getAllProperties,
@@ -7,6 +7,8 @@ import {
   updatePropertyStatus,
   deleteProperty,
   getHostProperties,
+  getWishlist,
+  toggleWishlist,
 } from "../controllers/property.controllers.js";
 import protect from "../middleware/auth.middleware.js";
 import authorize from "../middleware/role.middleware.js";
@@ -37,6 +39,8 @@ router.get(
   authorize("host"),
   getHostProperties,
 );
+router.get("/wishlist", protect, getWishlist);
+router.patch("/:id/wishlist", protect, toggleWishlist);
 router.get("/", getAllProperties);
 router.get("/:id", getPropertyById);
 export default router;

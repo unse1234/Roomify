@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, User, LogOut, Calendar, MessageCircle, Home as HomeIcon } from 'lucide-react';
+import { Menu, User, LogOut, Calendar, MessageCircle, Home as HomeIcon, Star, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 const UserMenu = () => {
@@ -32,56 +32,78 @@ const UserMenu = () => {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen((v) => !v)}
-        className="flex items-center gap-2 border border-gray-200 rounded-full py-1.5 pl-3 pr-1.5 hover:shadow-sm transition-shadow"
+        className="flex items-center gap-2 rounded-full border border-hairline py-1.5 pl-3 pr-1.5 transition-shadow hover:shadow-card"
+        aria-expanded={isOpen}
+        aria-label="Open user menu"
       >
-        <Menu className="w-4 h-4 text-gray-500" />
-        <span className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
-          {user?.name?.[0]?.toUpperCase() || <User className="w-4 h-4" />}
+        <Menu className="h-4 w-4 text-muted" />
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-strong text-xs font-semibold text-muted">
+          {user?.name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
         </span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
-          <div className="px-4 py-2 border-b border-gray-100">
-            <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
-            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+        <div className="absolute right-0 z-50 mt-2 w-60 rounded-md border border-hairline bg-white py-2 shadow-card">
+          <div className="border-b border-hairline-soft px-4 py-3">
+            <p className="truncate text-sm font-semibold text-ink">{user?.name}</p>
+            <p className="truncate text-xs text-muted">{user?.email}</p>
           </div>
 
           <Link
             to="/bookings"
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-surface-soft"
           >
-            <Calendar className="w-4 h-4 text-gray-400" />
+            <Calendar className="h-4 w-4 text-muted" />
             My bookings
           </Link>
 
           <Link
-            to="/chat"
+            to="/reviews"
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-surface-soft"
           >
-            <MessageCircle className="w-4 h-4 text-gray-400" />
+            <Star className="h-4 w-4 text-muted" />
+            My reviews
+          </Link>
+
+          <Link
+            to="/messages"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-surface-soft"
+          >
+            <MessageCircle className="h-4 w-4 text-muted" />
             Messages
           </Link>
 
           {isHost && (
             <Link
-              to="/host/dashboard"
+              to="/host/properties"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-surface-soft"
             >
-              <HomeIcon className="w-4 h-4 text-gray-400" />
-              Host dashboard
+              <HomeIcon className="h-4 w-4 text-muted" />
+              Host properties
             </Link>
           )}
 
-          <div className="border-t border-gray-100 mt-1 pt-1">
+          {isHost && (
+            <Link
+              to="/host/bookings"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-surface-soft"
+            >
+              <ClipboardList className="h-4 w-4 text-muted" />
+              Host bookings
+            </Link>
+          )}
+
+          <div className="mt-1 border-t border-hairline-soft pt-1">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-error hover:bg-[#fff4f1]"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="h-4 w-4" />
               Log out
             </button>
           </div>

@@ -1,4 +1,4 @@
-// models/User.js
+﻿// models/User.js
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 
@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Password is required'],
       minlength: 6,
-      select: false, // queries won't return password unless explicitly requested
+      select: false,
     },
     roles: {
       type: [String],
@@ -32,11 +32,16 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    wishlist: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Property',
+      },
+    ],
   },
   { timestamps: true }
 );
 
-// Hash password before saving — only if it was changed
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
 
@@ -44,12 +49,10 @@ userSchema.pre("save", async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Used during login to verify entered password
 userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// RBAC helper — middleware will use this to gate routes
 userSchema.methods.hasRole = function (role) {
   return this.roles.includes(role);
 };
