@@ -2,7 +2,7 @@ import { Home, CheckCircle } from 'lucide-react';
 
 const AuthLayout = ({ imageUrl, heading, subheading, features, children }) => {
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-white">
       <div
         className="hidden lg:flex lg:w-1/2 relative bg-cover bg-center bg-gray-900"
         style={{ backgroundImage: `url(${imageUrl})` }}
@@ -20,7 +20,7 @@ const AuthLayout = ({ imageUrl, heading, subheading, features, children }) => {
               <div className="mt-8 space-y-3">
                 {features.map((f) => (
                   <div key={f} className="flex items-center gap-2 text-sm text-white/90">
-                    <CheckCircle className="w-4 h-4 text-blue-400 shrink-0" />
+                    <CheckCircle className="w-4 h-4 text-primary shrink-0" />
                     {f}
                   </div>
                 ))}

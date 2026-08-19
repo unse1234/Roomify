@@ -1,20 +1,31 @@
-const FormInput = ({ label, icon: Icon, error, className = '', ...props }) => (
-  <div className={className}>
-    {label && <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>}
+import { useId } from 'react';
+
+const FormInput = ({ label, icon: Icon, error, className = '', id, ...props }) => {
+  const generatedId = useId();
+  const inputId = id || props.name || generatedId;
+  const errorId = `${inputId}-error`;
+
+  return (
+    <div className={className}>
+      {label && <label htmlFor={inputId} className="block text-sm font-medium text-ink mb-1.5">{label}</label>}
     <div className="relative">
-      {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />}
+      {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />}
       <input
-        className={`w-full rounded-xl border bg-white py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors
+        id={inputId}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : undefined}
+        className={`w-full rounded-sm border bg-white py-2.5 text-sm text-ink placeholder:text-muted-soft outline-none transition-colors
           ${Icon ? 'pl-10 pr-4' : 'px-4'}
           ${error
-            ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-100'
-            : 'border-gray-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'}
-          disabled:bg-gray-50 disabled:text-gray-400`}
+            ? 'border-[#f3b6a8] focus:border-error focus:ring-2 focus:ring-[#fff4f1]'
+            : 'border-hairline focus:border-ink focus:ring-2 focus:ring-surface-soft'}
+          disabled:bg-surface-soft disabled:text-muted-soft`}
         {...props}
       />
     </div>
-    {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
-  </div>
-);
+      {error && <p id={errorId} className="mt-1.5 text-xs text-error">{error}</p>}
+    </div>
+  );
+};
 
 export default FormInput;

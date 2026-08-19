@@ -1,13 +1,14 @@
 import { Check } from 'lucide-react';
 
 const VARIANTS = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300',
-  social: 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+  primary: 'bg-primary text-white hover:bg-primary-active disabled:bg-primary-disabled',
+  secondary: 'bg-white border border-hairline text-ink hover:bg-surface-soft',
+  danger: 'bg-error text-white hover:bg-[#9f2d12] disabled:bg-[#edb8a9]',
 };
 
 const Button = ({ children, isLoading, isSuccess, variant = 'primary', className = '', disabled, ...props }) => (
   <button
-    className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
+    className={`w-full min-h-11 flex items-center justify-center gap-2 rounded-sm px-5 py-2.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
     disabled={isLoading || disabled}
     {...props}
   >
