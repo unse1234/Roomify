@@ -152,13 +152,21 @@ export const getAllProperties = async (req, res) => {
           query: filter,
         },
       },
-      { $sort: { distance: 1 } },
-      { $skip: skip },
-      { $limit: Number(limit) },
+      {
+        $facet: {
+          data: [
+            { $sort: { distance: 1 } },
+            { $skip: skip },
+            { $limit: Number(limit) },
+          ],
+          metadata: [{ $count: "total" }],
+        },
+      },
     ];
 
-    properties = await Property.aggregate(pipeline);
-    total = properties.length;
+    const [geoResult] = await Property.aggregate(pipeline);
+    properties = geoResult?.data || [];
+    total = geoResult?.metadata[0]?.total || 0;
   } else {
     [properties, total] = await Promise.all([
       Property.find(filter)
