@@ -14,6 +14,36 @@ const assertParticipant = (conversation, userId) => {
   }
 };
 
+const rebuildConversationPreview = async (conversationId, session) => {
+  const latestMessage = await Message.findOne({
+    conversation: conversationId,
+    isDeleted: false,
+  })
+    .sort({ createdAt: -1 })
+    .session(session)
+    .lean();
+
+  const lastMessage = latestMessage
+    ? {
+        content: latestMessage.content,
+        sender: latestMessage.sender,
+        sentAt: latestMessage.createdAt,
+      }
+    : {
+        content: '',
+        sender: null,
+        sentAt: null,
+      };
+
+  await Conversation.updateOne(
+    { _id: conversationId },
+    { $set: { lastMessage } },
+    { session },
+  );
+
+  return latestMessage;
+};
+
 /**
  * POST /api/chat/conversations
  * Starts a conversation with a recipient (optionally scoped to a
@@ -232,26 +262,77 @@ export const markConversationAsRead = async (req, res) => {
  * Soft-deletes a message. Only the original sender can delete it.
  */
 export const deleteMessage = async (req, res) => {
+  const session = await mongoose.startSession();
+
   try {
     const userId = req.user._id;
     const { messageId } = req.params;
+    let deletedMessage;
+    let latestMessage;
 
-    const message = await Message.findById(messageId);
-    if (!message) {
-      return res.status(404).json({ success: false, message: 'Message not found' });
-    }
+    await session.withTransaction(async () => {
+      const message = await Message.findById(messageId).session(session);
+      if (!message) {
+        const error = new Error('Message not found');
+        error.statusCode = 404;
+        throw error;
+      }
 
-    if (message.sender.toString() !== userId.toString()) {
-      return res
-        .status(403)
-        .json({ success: false, message: 'Not authorized to delete this message' });
-    }
+      const conversation = await Conversation.findById(message.conversation).session(session);
+      if (!conversation) {
+        const error = new Error('Conversation not found');
+        error.statusCode = 404;
+        throw error;
+      }
+      assertParticipant(conversation, userId);
 
-    message.isDeleted = true;
-    await message.save();
+      if (message.sender.toString() !== userId.toString()) {
+        const error = new Error('Not authorized to delete this message');
+        error.statusCode = 403;
+        throw error;
+      }
 
-    return res.status(200).json({ success: true, message: 'Message deleted' });
+      if (message.isDeleted) {
+        const error = new Error('Message has already been deleted');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      message.isDeleted = true;
+      await message.save({ session });
+      deletedMessage = message;
+      latestMessage = await rebuildConversationPreview(message.conversation, session);
+    });
+
+    const conversationId = deletedMessage.conversation.toString();
+    getIO().to(`user:${userId}`).emit('message_deleted', {
+      messageId: deletedMessage._id,
+      conversationId,
+      lastMessage: latestMessage
+        ? {
+            content: latestMessage.content,
+            sender: latestMessage.sender,
+            sentAt: latestMessage.createdAt,
+          }
+        : { content: '', sender: null, sentAt: null },
+    });
+    getIO().to(`conversation:${conversationId}`).emit('message_deleted', {
+      messageId: deletedMessage._id,
+      conversationId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Message deleted',
+      conversationId,
+      lastMessage: latestMessage,
+    });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to delete message' });
+    const status = error.statusCode || 500;
+    return res
+      .status(status)
+      .json({ success: false, message: error.message || 'Failed to delete message' });
+  } finally {
+    await session.endSession();
   }
 };
