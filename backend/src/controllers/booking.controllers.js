@@ -116,6 +116,36 @@ const BOOKING_POPULATE = [
   { path: 'host',     select: 'name email' },
 ];
 
+const BOOKING_LOCK_DURATION_MS = 30_000;
+
+const acquireBookingLock = async (propertyId, lockToken, session) => {
+  const now = new Date();
+  const lockResult = await Property.updateOne(
+    {
+      _id: propertyId,
+      $or: [
+        { bookingLockToken: null },
+        { bookingLockExpiresAt: { $lte: now } },
+      ],
+    },
+    {
+      $set: {
+        bookingLockToken: lockToken,
+        bookingLockExpiresAt: new Date(now.getTime() + BOOKING_LOCK_DURATION_MS),
+      },
+    },
+    { session },
+  );
+
+  return lockResult.modifiedCount === 1;
+};
+
+const releaseBookingLock = (propertyId, lockToken) =>
+  Property.updateOne(
+    { _id: propertyId, bookingLockToken: lockToken },
+    { $set: { bookingLockToken: null, bookingLockExpiresAt: null } },
+  );
+
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // CONTROLLERS
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -168,66 +198,85 @@ export const createBooking = async (req, res) => {
   // A session-based transaction ensures no two bookings for the same dates
   // are created concurrently (race condition prevention).
   const session = await mongoose.startSession();
+  const lockToken = new mongoose.Types.ObjectId();
+  let lockAcquired = false;
+  let booking = null;
+  let conflictFound = false;
 
   try {
-    session.startTransaction();
+    await session.withTransaction(async () => {
+      lockAcquired = await acquireBookingLock(propertyId, lockToken, session);
 
-    // Re-check for conflicts inside the transaction
-    const conflict = await findDateConflict(
-      propertyId,
-      checkInDate,
-      checkOutDate,
-      null,
-      session
-    );
+      if (!lockAcquired) return;
 
-    if (conflict) {
-      await session.abortTransaction();
+      // Re-check for conflicts while holding the property lock.
+      const conflict = await findDateConflict(
+        propertyId,
+        checkInDate,
+        checkOutDate,
+        null,
+        session
+      );
+
+      if (conflict) {
+        conflictFound = true;
+        await Property.updateOne(
+          { _id: propertyId, bookingLockToken: lockToken },
+          { $set: { bookingLockToken: null, bookingLockExpiresAt: null } },
+          { session },
+        );
+        return;
+      }
+
+      // Build price snapshot
+      const nights         = getNights(checkInDate, checkOutDate);
+      const priceBreakdown = buildPriceBreakdown(
+        property.price,
+        nights,
+        property.currency
+      );
+
+      // Create booking within the transaction
+      [booking] = await Booking.create(
+        [
+          {
+            property:        propertyId,
+            guest:           req.user._id,
+            host:            property.host, // denormalized for host dashboard queries
+            checkIn:         checkInDate,
+            checkOut:        checkOutDate,
+            guestCount,
+            priceBreakdown,
+            specialRequests: specialRequests ?? null,
+            status:          BOOKING_STATUS.PENDING,
+            paymentStatus:   PAYMENT_STATUS.UNPAID,
+          },
+        ],
+        { session }
+      );
+
+      await Property.updateOne(
+        { _id: propertyId, bookingLockToken: lockToken },
+        { $set: { bookingLockToken: null, bookingLockExpiresAt: null } },
+        { session },
+      );
+    });
+
+    if (!lockAcquired || conflictFound) {
       return res.status(409).json({
         success: false,
-        message: 'Property is already booked for the selected dates',
-        conflict: {
-          checkIn:  conflict.checkIn,
-          checkOut: conflict.checkOut,
-        },
+        message: 'Property is already being booked or is unavailable for the selected dates',
       });
     }
-
-    // Build price snapshot
-    const nights         = getNights(checkInDate, checkOutDate);
-    const priceBreakdown = buildPriceBreakdown(
-      property.price,
-      nights,
-      property.currency
-    );
-
-    // Create booking within the transaction
-    const [booking] = await Booking.create(
-      [
-        {
-          property:        propertyId,
-          guest:           req.user._id,
-          host:            property.host, // denormalized for host dashboard queries
-          checkIn:         checkInDate,
-          checkOut:        checkOutDate,
-          guestCount,
-          priceBreakdown,
-          specialRequests: specialRequests ?? null,
-          status:          BOOKING_STATUS.PENDING,
-          paymentStatus:   PAYMENT_STATUS.UNPAID,
-        },
-      ],
-      { session }
-    );
-
-    await session.commitTransaction();
 
     // Populate after commit â€” no need to hold the transaction open during populate
     await booking.populate(BOOKING_POPULATE);
 
     return res.status(201).json({ success: true, data: booking });
   } catch (err) {
-    await session.abortTransaction();
+    if (lockAcquired) {
+      await releaseBookingLock(propertyId, lockToken);
+    }
     throw err; // Express 5 forwards to global error handler
   } finally {
     session.endSession();

@@ -127,6 +127,16 @@ const propertySchema = new Schema(
       enum: PROPERTY_STATUS,
       default: 'active',
     },
+    bookingLockToken: {
+      type: Schema.Types.ObjectId,
+      default: null,
+      select: false,
+    },
+    bookingLockExpiresAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
 
     // ── Denormalized review stats (updated when reviews are added/removed) ──
     // Avoids expensive aggregation on every listing fetch
