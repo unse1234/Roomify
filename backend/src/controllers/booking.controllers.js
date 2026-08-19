@@ -1,7 +1,7 @@
 ﻿// controllers/booking.controller.js
-import mongoose from 'mongoose';
-import Booking  from '../models/booking.model.js';
-import Property from '../models/property.model.js';
+import mongoose from "mongoose";
+import Booking from "../models/booking.model.js";
+import Property from "../models/property.model.js";
 import {
   BOOKING_STATUS,
   PAYMENT_STATUS,
@@ -9,7 +9,7 @@ import {
   ACTIVE_BOOKING_STATUSES,
   TERMINAL_BOOKING_STATUSES,
   BOOKING_CONFIG,
-} from '../config/booking.config.js';
+} from "../config/booking.config.js";
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // PRIVATE HELPERS
@@ -33,10 +33,10 @@ const getNights = (checkIn, checkOut) =>
  * @returns {object} priceBreakdown
  */
 const buildPriceBreakdown = (pricePerNight, nights, currency) => {
-  const subtotal   = pricePerNight * nights;
+  const subtotal = pricePerNight * nights;
   const serviceFee = Math.round(subtotal * BOOKING_CONFIG.SERVICE_FEE_PERCENT);
   return {
-    basePrice:   pricePerNight,
+    basePrice: pricePerNight,
     nights,
     subtotal,
     serviceFee,
@@ -65,12 +65,12 @@ const findDateConflict = async (
   checkIn,
   checkOut,
   excludeBookingId = null,
-  session          = null
+  session = null,
 ) => {
   const query = {
     property: propertyId,
-    status:   { $in: ACTIVE_BOOKING_STATUSES },
-    checkIn:  { $lt: checkOut },
+    status: { $in: ACTIVE_BOOKING_STATUSES },
+    checkIn: { $lt: checkOut },
     checkOut: { $gt: checkIn },
   };
 
@@ -90,7 +90,7 @@ const findDateConflict = async (
 const resolveCancelledBy = (booking, user) => {
   const userId = user._id.toString();
   if (userId === booking.guest.toString()) return CANCELLED_BY.GUEST;
-  if (userId === booking.host.toString())  return CANCELLED_BY.HOST;
+  if (userId === booking.host.toString()) return CANCELLED_BY.HOST;
   return CANCELLED_BY.ADMIN;
 };
 
@@ -104,16 +104,16 @@ const resolveCancelledBy = (booking, user) => {
 const isParticipant = (booking, user) =>
   booking.guest._id.toString() === user._id.toString() ||
   booking.host._id.toString() === user._id.toString() ||
-  user.hasRole('admin');
+  user.hasRole("admin");
 
 /**
  * Standard populate config reused across multiple controllers.
  * Centralized here so a field change doesn't require edits in N places.
  */
 const BOOKING_POPULATE = [
-  { path: 'property', select: 'title address images price currency' },
-  { path: 'guest',    select: 'name email' },
-  { path: 'host',     select: 'name email' },
+  { path: "property", select: "title address images price currency" },
+  { path: "guest", select: "name email" },
+  { path: "host", select: "name email" },
 ];
 
 const BOOKING_LOCK_DURATION_MS = 30_000;
@@ -131,7 +131,9 @@ const acquireBookingLock = async (propertyId, lockToken, session) => {
     {
       $set: {
         bookingLockToken: lockToken,
-        bookingLockExpiresAt: new Date(now.getTime() + BOOKING_LOCK_DURATION_MS),
+        bookingLockExpiresAt: new Date(
+          now.getTime() + BOOKING_LOCK_DURATION_MS,
+        ),
       },
     },
     { session },
@@ -156,9 +158,10 @@ const releaseBookingLock = (propertyId, lockToken) =>
 //              Without a transaction, two concurrent requests could both pass
 //              the conflict check and create overlapping bookings (race condition).
 export const createBooking = async (req, res) => {
-  const { propertyId, checkIn, checkOut, guestCount, specialRequests } = req.body;
+  const { propertyId, checkIn, checkOut, guestCount, specialRequests } =
+    req.body;
 
-  const checkInDate  = new Date(checkIn);
+  const checkInDate = new Date(checkIn);
   const checkOutDate = new Date(checkOut);
 
   // â”€â”€ Fetch & validate property â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -167,14 +170,14 @@ export const createBooking = async (req, res) => {
   if (!property) {
     return res.status(404).json({
       success: false,
-      message: 'Property not found',
+      message: "Property not found",
     });
   }
 
-  if (property.status !== 'active') {
+  if (property.status !== "active") {
     return res.status(400).json({
       success: false,
-      message: 'This property is not available for booking',
+      message: "This property is not available for booking",
     });
   }
 
@@ -182,7 +185,7 @@ export const createBooking = async (req, res) => {
   if (property.host.toString() === req.user._id.toString()) {
     return res.status(403).json({
       success: false,
-      message: 'You cannot book your own property',
+      message: "You cannot book your own property",
     });
   }
 
@@ -215,7 +218,7 @@ export const createBooking = async (req, res) => {
         checkInDate,
         checkOutDate,
         null,
-        session
+        session,
       );
 
       if (conflict) {
@@ -229,30 +232,30 @@ export const createBooking = async (req, res) => {
       }
 
       // Build price snapshot
-      const nights         = getNights(checkInDate, checkOutDate);
+      const nights = getNights(checkInDate, checkOutDate);
       const priceBreakdown = buildPriceBreakdown(
         property.price,
         nights,
-        property.currency
+        property.currency,
       );
 
       // Create booking within the transaction
       [booking] = await Booking.create(
         [
           {
-            property:        propertyId,
-            guest:           req.user._id,
-            host:            property.host, // denormalized for host dashboard queries
-            checkIn:         checkInDate,
-            checkOut:        checkOutDate,
+            property: propertyId,
+            guest: req.user._id,
+            host: property.host, // denormalized for host dashboard queries
+            checkIn: checkInDate,
+            checkOut: checkOutDate,
             guestCount,
             priceBreakdown,
             specialRequests: specialRequests ?? null,
-            status:          BOOKING_STATUS.PENDING,
-            paymentStatus:   PAYMENT_STATUS.UNPAID,
+            status: BOOKING_STATUS.PENDING,
+            paymentStatus: PAYMENT_STATUS.UNPAID,
           },
         ],
-        { session }
+        { session },
       );
 
       await Property.updateOne(
@@ -265,7 +268,8 @@ export const createBooking = async (req, res) => {
     if (!lockAcquired || conflictFound) {
       return res.status(409).json({
         success: false,
-        message: 'Property is already being booked or is unavailable for the selected dates',
+        message:
+          "Property is already being booked or is unavailable for the selected dates",
       });
     }
 
@@ -289,23 +293,28 @@ export const checkAvailability = async (req, res) => {
   const { propertyId, checkIn, checkOut } = req.validated.query;
 
   // Property existence check â€” lightweight
-  const propertyExists = await Property.exists({ _id: propertyId, status: 'active' });
+  const propertyExists = await Property.exists({
+    _id: propertyId,
+    status: "active",
+  });
   if (!propertyExists) {
-    return res.status(404).json({ success: false, message: 'Property not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Property not found" });
   }
 
   const conflict = await findDateConflict(
     propertyId,
     new Date(checkIn),
-    new Date(checkOut)
+    new Date(checkOut),
   );
 
   return res.status(200).json({
-    success:   true,
+    success: true,
     available: !conflict,
-    message:   conflict
-      ? 'Property is not available for the selected dates'
-      : 'Property is available for the selected dates',
+    message: conflict
+      ? "Property is not available for the selected dates"
+      : "Property is available for the selected dates",
   });
 };
 
@@ -321,9 +330,9 @@ export const getMyBookings = async (req, res) => {
 
   const [bookings, total] = await Promise.all([
     Booking.find(filter)
-      .populate('property', 'title address images price currency')
-      .populate('host', 'name email')
-      .sort('-createdAt')
+      .populate("property", "title address images price currency")
+      .populate("host", "name email")
+      .sort("-createdAt")
       .skip(skip)
       .limit(limit)
       .lean(),
@@ -331,12 +340,12 @@ export const getMyBookings = async (req, res) => {
   ]);
 
   return res.status(200).json({
-    success:    true,
+    success: true,
     total,
     page,
     totalPages: Math.ceil(total / limit),
-    count:      bookings.length,
-    data:       bookings,
+    count: bookings.length,
+    data: bookings,
   });
 };
 
@@ -352,9 +361,9 @@ export const getHostBookings = async (req, res) => {
 
   const [bookings, total] = await Promise.all([
     Booking.find(filter)
-      .populate('property', 'title address images')
-      .populate('guest', 'name email')
-      .sort('-createdAt')
+      .populate("property", "title address images")
+      .populate("guest", "name email")
+      .sort("-createdAt")
       .skip(skip)
       .limit(limit)
       .lean(),
@@ -362,12 +371,12 @@ export const getHostBookings = async (req, res) => {
   ]);
 
   return res.status(200).json({
-    success:    true,
+    success: true,
     total,
     page,
     totalPages: Math.ceil(total / limit),
-    count:      bookings.length,
-    data:       bookings,
+    count: bookings.length,
+    data: bookings,
   });
 };
 
@@ -375,19 +384,25 @@ export const getHostBookings = async (req, res) => {
 // â”€â”€â”€ @access  Private â€” guest, host, admin
 export const getBookingById = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
-    return res.status(400).json({ success: false, message: 'Invalid booking ID' });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid booking ID" });
   }
 
-  const booking = await Booking.findById(req.params.id).populate(BOOKING_POPULATE);
+  const booking = await Booking.findById(req.params.id).populate(
+    BOOKING_POPULATE,
+  );
 
   if (!booking) {
-    return res.status(404).json({ success: false, message: 'Booking not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Booking not found" });
   }
 
   if (!isParticipant(booking, req.user)) {
     return res.status(403).json({
       success: false,
-      message: 'Not authorized to view this booking',
+      message: "Not authorized to view this booking",
     });
   }
 
@@ -401,19 +416,23 @@ export const getBookingById = async (req, res) => {
 //              overlapping bookings for the same property simultaneously.
 export const confirmBooking = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
-    return res.status(400).json({ success: false, message: 'Invalid booking ID' });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid booking ID" });
   }
 
   const booking = await Booking.findById(req.params.id);
 
   if (!booking) {
-    return res.status(404).json({ success: false, message: 'Booking not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Booking not found" });
   }
 
   if (booking.host.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       success: false,
-      message: 'Only the property host can confirm this booking',
+      message: "Only the property host can confirm this booking",
     });
   }
 
@@ -436,14 +455,15 @@ export const confirmBooking = async (req, res) => {
       booking.checkIn,
       booking.checkOut,
       booking._id,
-      session
+      session,
     );
 
     if (conflict) {
       await session.abortTransaction();
       return res.status(409).json({
         success: false,
-        message: 'These dates are no longer available â€” another booking was confirmed first',
+        message:
+          "These dates are no longer available â€” another booking was confirmed first",
       });
     }
 
@@ -465,20 +485,24 @@ export const confirmBooking = async (req, res) => {
 // â”€â”€â”€ @access  Private â€” guest, host, admin
 export const cancelBooking = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
-    return res.status(400).json({ success: false, message: 'Invalid booking ID' });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid booking ID" });
   }
 
   const { reason } = req.body;
   const booking = await Booking.findById(req.params.id);
 
   if (!booking) {
-    return res.status(404).json({ success: false, message: 'Booking not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Booking not found" });
   }
 
   if (!isParticipant(booking, req.user)) {
     return res.status(403).json({
       success: false,
-      message: 'Not authorized to cancel this booking',
+      message: "Not authorized to cancel this booking",
     });
   }
 
@@ -491,10 +515,10 @@ export const cancelBooking = async (req, res) => {
 
   const cancelledBy = resolveCancelledBy(booking, req.user);
 
-  booking.status       = BOOKING_STATUS.CANCELLED;
+  booking.status = BOOKING_STATUS.CANCELLED;
   booking.cancellation = {
     cancelledBy,
-    reason:      reason ?? null,
+    reason: reason ?? null,
     cancelledAt: new Date(),
     // â”€â”€ Stripe integration point â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // When Stripe is added:
@@ -502,7 +526,7 @@ export const cancelBooking = async (req, res) => {
     // 2. Store result.id in refundId and result.amount in refundAmount
     // 3. Update paymentStatus accordingly
     refundAmount: 0,
-    refundId:     null,
+    refundId: null,
   };
 
   // Mark for refund if payment was already captured
@@ -524,13 +548,17 @@ export const cancelBooking = async (req, res) => {
 //              This manual route exists for admin overrides and testing.
 export const completeBooking = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
-    return res.status(400).json({ success: false, message: 'Invalid booking ID' });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid booking ID" });
   }
 
   const booking = await Booking.findById(req.params.id);
 
   if (!booking) {
-    return res.status(404).json({ success: false, message: 'Booking not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Booking not found" });
   }
 
   if (booking.status !== BOOKING_STATUS.CONFIRMED) {
@@ -543,7 +571,8 @@ export const completeBooking = async (req, res) => {
   if (new Date() < new Date(booking.checkOut)) {
     return res.status(400).json({
       success: false,
-      message: 'Booking cannot be completed before the check-out date has passed',
+      message:
+        "Booking cannot be completed before the check-out date has passed",
     });
   }
 

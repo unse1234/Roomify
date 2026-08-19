@@ -10,9 +10,8 @@ import {
 } from "../utils/imagekit.utils.js";
 import { logger } from "../utils/logger.js";
 
-const isOwnerOrAdmin = (property, user) => (
-  property.host.toString() === user._id.toString() || user.hasRole("admin")
-);
+const isOwnerOrAdmin = (property, user) =>
+  property.host.toString() === user._id.toString() || user.hasRole("admin");
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -23,7 +22,9 @@ const parseMaybeJson = (value) => {
 
 const buildPropertyUpdate = (body) => {
   const update = { ...body };
-  ["host", "averageRating", "totalReviews", "status", "images"].forEach((field) => delete update[field]);
+  ["host", "averageRating", "totalReviews", "status", "images"].forEach(
+    (field) => delete update[field],
+  );
 
   if (update.area) update.area = parseMaybeJson(update.area);
   if (update.address) update.address = parseMaybeJson(update.address);
@@ -88,7 +89,7 @@ export const createProperty = async (req, res) => {
       data: property,
     });
   } catch (error) {
-    cleanupImages(images, 'property_image_upload_cleanup_failed', req.user._id);
+    cleanupImages(images, "property_image_upload_cleanup_failed", req.user._id);
     throw error;
   }
 };
@@ -214,7 +215,9 @@ export const updateProperty = async (req, res) => {
   }
 
   if (!isOwnerOrAdmin(property, req.user)) {
-    return res.status(403).json({ message: "Not authorized to update this property" });
+    return res
+      .status(403)
+      .json({ message: "Not authorized to update this property" });
   }
 
   const update = buildPropertyUpdate(req.body);
@@ -232,7 +235,11 @@ export const updateProperty = async (req, res) => {
   );
 
   if (replacementImages) {
-    cleanupImages(property.images, "property_old_image_cleanup_failed", property._id);
+    cleanupImages(
+      property.images,
+      "property_old_image_cleanup_failed",
+      property._id,
+    );
   }
 
   res.status(200).json({ success: true, data: updated });
@@ -268,13 +275,17 @@ export const deleteProperty = async (req, res) => {
   }
 
   if (!isOwnerOrAdmin(property, req.user)) {
-    return res.status(403).json({ message: "Not authorized to delete this property" });
+    return res
+      .status(403)
+      .json({ message: "Not authorized to delete this property" });
   }
 
   await property.deleteOne();
   cleanupImages(property.images, "property_image_cleanup_failed", property._id);
 
-  res.status(200).json({ success: true, message: "Property deleted successfully" });
+  res
+    .status(200)
+    .json({ success: true, message: "Property deleted successfully" });
 };
 
 export const getHostProperties = async (req, res) => {
@@ -282,7 +293,9 @@ export const getHostProperties = async (req, res) => {
     .sort("-createdAt")
     .lean();
 
-  res.status(200).json({ success: true, count: properties.length, data: properties });
+  res
+    .status(200)
+    .json({ success: true, count: properties.length, data: properties });
 };
 
 export const getWishlist = async (req, res) => {
@@ -304,7 +317,9 @@ export const getWishlist = async (req, res) => {
 };
 
 export const toggleWishlist = async (req, res) => {
-  const property = await Property.findById(req.params.id).select("_id status").lean();
+  const property = await Property.findById(req.params.id)
+    .select("_id status")
+    .lean();
 
   if (!property || property.status !== "active") {
     return res.status(404).json({ message: "Property not found" });

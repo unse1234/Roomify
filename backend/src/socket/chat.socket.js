@@ -1,13 +1,13 @@
-import { Server } from 'socket.io';
-import jwt from 'jsonwebtoken';
-import * as cookie from 'cookie';
-import User from '../models/users.model.js';
-import { Conversation } from '../models/chat.model.js';
-import { logger } from '../utils/logger.js';
+import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
+import * as cookie from "cookie";
+import User from "../models/users.model.js";
+import { Conversation } from "../models/chat.model.js";
+import { logger } from "../utils/logger.js";
 let io;
 
 const getConversationId = (payload) =>
-  typeof payload === 'string' ? payload : payload?.conversationId;
+  typeof payload === "string" ? payload : payload?.conversationId;
 
 /**
  * Initializes Socket.io on the existing HTTP server and wires up
@@ -27,27 +27,27 @@ export const initializeSocket = (httpServer) => {
   io.use(async (socket, next) => {
     try {
       const rawCookies = socket.handshake.headers.cookie;
-      if (!rawCookies) return next(new Error('Authentication required'));
+      if (!rawCookies) return next(new Error("Authentication required"));
 
       const { jwt: token } = cookie.parse(rawCookies);
-      if (!token) return next(new Error('Authentication required'));
+      if (!token) return next(new Error("Authentication required"));
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select('_id').lean();
-      if (!user) return next(new Error('Authentication failed'));
+      const user = await User.findById(decoded.id).select("_id").lean();
+      if (!user) return next(new Error("Authentication failed"));
 
       socket.userId = user._id.toString();
       next();
     } catch (error) {
-      logger.warn('socket_auth_failed', {
+      logger.warn("socket_auth_failed", {
         errorName: error.name,
         errorMessage: error.message,
       });
-      next(new Error('Authentication failed'));
+      next(new Error("Authentication failed"));
     }
   });
 
-  io.on('connection', (socket) => {
+  io.on("connection", (socket) => {
     const authorizedConversations = new Set();
 
     // Personal room — lets any controller notify this exact user
@@ -55,17 +55,20 @@ export const initializeSocket = (httpServer) => {
     // (if any) they currently have open.
     socket.join(`user:${socket.userId}`);
 
-    socket.on('join_conversation', async (conversationId, acknowledge) => {
+    socket.on("join_conversation", async (conversationId, acknowledge) => {
       try {
         const conversation = await Conversation.findById(conversationId)
-          .select('participants')
+          .select("participants")
           .lean();
         const isParticipant = conversation?.participants.some(
-          (participantId) => participantId.toString() === socket.userId
+          (participantId) => participantId.toString() === socket.userId,
         );
 
         if (!isParticipant) {
-          acknowledge?.({ success: false, message: 'Not authorized to access this conversation' });
+          acknowledge?.({
+            success: false,
+            message: "Not authorized to access this conversation",
+          });
           return;
         }
 
@@ -73,33 +76,44 @@ export const initializeSocket = (httpServer) => {
         socket.join(`conversation:${conversationId}`);
         acknowledge?.({ success: true });
       } catch (error) {
-        logger.warn('socket_conversation_join_failed', {
+        logger.warn("socket_conversation_join_failed", {
           conversationId,
           userId: socket.userId,
           errorName: error.name,
           errorMessage: error.message,
         });
-        acknowledge?.({ success: false, message: 'Unable to join conversation' });
+        acknowledge?.({
+          success: false,
+          message: "Unable to join conversation",
+        });
       }
     });
 
-    socket.on('leave_conversation', (conversationId) => {
+    socket.on("leave_conversation", (conversationId) => {
       socket.leave(`conversation:${conversationId}`);
     });
 
-    socket.on('typing_start', (payload) => {
+    socket.on("typing_start", (payload) => {
       const conversationId = getConversationId(payload);
-      if (!conversationId || !authorizedConversations.has(conversationId.toString())) return;
-      socket.to(`conversation:${conversationId}`).emit('typing_start', {
+      if (
+        !conversationId ||
+        !authorizedConversations.has(conversationId.toString())
+      )
+        return;
+      socket.to(`conversation:${conversationId}`).emit("typing_start", {
         conversationId,
         userId: socket.userId,
       });
     });
 
-    socket.on('typing_stop', (payload) => {
+    socket.on("typing_stop", (payload) => {
       const conversationId = getConversationId(payload);
-      if (!conversationId || !authorizedConversations.has(conversationId.toString())) return;
-      socket.to(`conversation:${conversationId}`).emit('typing_stop', {
+      if (
+        !conversationId ||
+        !authorizedConversations.has(conversationId.toString())
+      )
+        return;
+      socket.to(`conversation:${conversationId}`).emit("typing_stop", {
         conversationId,
         userId: socket.userId,
       });
@@ -115,7 +129,7 @@ export const initializeSocket = (httpServer) => {
  */
 export const getIO = () => {
   if (!io) {
-    throw new Error('Socket.io has not been initialized yet');
+    throw new Error("Socket.io has not been initialized yet");
   }
   return io;
 };

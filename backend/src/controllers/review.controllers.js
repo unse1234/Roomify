@@ -1,9 +1,9 @@
 // controllers/review.controllers.js
-import mongoose from 'mongoose';
-import Review, { recalculatePropertyRating } from '../models/review.model.js';
-import Booking  from '../models/booking.model.js';
-import Property from '../models/property.model.js';
-import { BOOKING_STATUS } from '../config/booking.config.js';
+import mongoose from "mongoose";
+import Review, { recalculatePropertyRating } from "../models/review.model.js";
+import Booking from "../models/booking.model.js";
+import Property from "../models/property.model.js";
+import { BOOKING_STATUS } from "../config/booking.config.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRIVATE HELPERS
@@ -14,8 +14,8 @@ import { BOOKING_STATUS } from '../config/booking.config.js';
  * Centralized to avoid repetition and ensure consistency.
  */
 const REVIEW_POPULATE = [
-  { path: 'reviewer', select: 'name'       },
-  { path: 'property', select: 'title host' },
+  { path: "reviewer", select: "name" },
+  { path: "property", select: "title host" },
 ];
 
 /**
@@ -24,10 +24,10 @@ const REVIEW_POPULATE = [
  * @returns {object}
  */
 const SORT_MAP = {
-  newest:  { createdAt: -1 },
-  oldest:  { createdAt:  1 },
-  highest: { rating: -1    },
-  lowest:  { rating:  1    },
+  newest: { createdAt: -1 },
+  oldest: { createdAt: 1 },
+  highest: { rating: -1 },
+  lowest: { rating: 1 },
 };
 
 /**
@@ -65,7 +65,7 @@ export const createReview = async (req, res) => {
   if (!mongoose.isValidObjectId(bookingId)) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid booking ID format',
+      message: "Invalid booking ID format",
     });
   }
 
@@ -75,7 +75,7 @@ export const createReview = async (req, res) => {
   if (!booking) {
     return res.status(404).json({
       success: false,
-      message: 'Booking not found',
+      message: "Booking not found",
     });
   }
 
@@ -83,7 +83,7 @@ export const createReview = async (req, res) => {
   if (booking.guest.toString() !== req.user._id.toString()) {
     return res.status(403).json({
       success: false,
-      message: 'Only the guest of this booking can leave a review',
+      message: "Only the guest of this booking can leave a review",
     });
   }
 
@@ -101,7 +101,7 @@ export const createReview = async (req, res) => {
   if (booking.isReviewed) {
     return res.status(409).json({
       success: false,
-      message: 'You have already submitted a review for this booking',
+      message: "You have already submitted a review for this booking",
     });
   }
 
@@ -118,23 +118,23 @@ export const createReview = async (req, res) => {
     const [review] = await Review.create(
       [
         {
-          property:        booking.property,
-          reviewer:        req.user._id,
-          booking:         bookingId,
+          property: booking.property,
+          reviewer: req.user._id,
+          booking: bookingId,
           rating,
           categoryRatings: categoryRatings ?? {},
           comment,
-          type:            'guest_to_property',
+          type: "guest_to_property",
         },
       ],
-      { session }
+      { session },
     );
 
     // Flip isReviewed flag on booking — prevents duplicate review attempts
     await Booking.findByIdAndUpdate(
       bookingId,
       { $set: { isReviewed: true } },
-      { session }
+      { session },
     );
 
     await session.commitTransaction();
@@ -151,7 +151,7 @@ export const createReview = async (req, res) => {
     if (err.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: 'A review for this booking already exists',
+        message: "A review for this booking already exists",
       });
     }
 
@@ -169,7 +169,7 @@ export const getPropertyReviews = async (req, res) => {
   if (!mongoose.isValidObjectId(propertyId)) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid property ID format',
+      message: "Invalid property ID format",
     });
   }
 
@@ -178,7 +178,7 @@ export const getPropertyReviews = async (req, res) => {
   if (!propertyExists) {
     return res.status(404).json({
       success: false,
-      message: 'Property not found',
+      message: "Property not found",
     });
   }
 
@@ -186,14 +186,14 @@ export const getPropertyReviews = async (req, res) => {
   const skip = (page - 1) * limit;
 
   const filter = {
-    property:  propertyId,
+    property: propertyId,
     isVisible: true,
-    type:      'guest_to_property',
+    type: "guest_to_property",
   };
 
   const [reviews, total] = await Promise.all([
     Review.find(filter)
-      .populate('reviewer', 'name')
+      .populate("reviewer", "name")
       .sort(SORT_MAP[sort] ?? SORT_MAP.newest)
       .skip(skip)
       .limit(limit)
@@ -203,18 +203,18 @@ export const getPropertyReviews = async (req, res) => {
 
   // Fetch denormalized stats from property — avoids re-aggregating
   const property = await Property.findById(propertyId)
-    .select('averageRating totalReviews')
+    .select("averageRating totalReviews")
     .lean();
 
   return res.status(200).json({
-    success:       true,
+    success: true,
     averageRating: property?.averageRating ?? 0,
-    totalReviews:  property?.totalReviews  ?? 0,
+    totalReviews: property?.totalReviews ?? 0,
     total,
     page,
-    totalPages:    Math.ceil(total / limit),
-    count:         reviews.length,
-    data:          reviews,
+    totalPages: Math.ceil(total / limit),
+    count: reviews.length,
+    data: reviews,
   });
 };
 
@@ -228,7 +228,7 @@ export const getMyReviews = async (req, res) => {
 
   const [reviews, total] = await Promise.all([
     Review.find(filter)
-      .populate('property', 'title address images')
+      .populate("property", "title address images")
       .sort(SORT_MAP[sort] ?? SORT_MAP.newest)
       .skip(skip)
       .limit(limit)
@@ -237,12 +237,12 @@ export const getMyReviews = async (req, res) => {
   ]);
 
   return res.status(200).json({
-    success:    true,
+    success: true,
     total,
     page,
     totalPages: Math.ceil(total / limit),
-    count:      reviews.length,
-    data:       reviews,
+    count: reviews.length,
+    data: reviews,
   });
 };
 
@@ -252,7 +252,7 @@ export const getReviewById = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid review ID format',
+      message: "Invalid review ID format",
     });
   }
 
@@ -261,12 +261,16 @@ export const getReviewById = async (req, res) => {
     .lean();
 
   if (!review) {
-    return res.status(404).json({ success: false, message: 'Review not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Review not found" });
   }
 
   // Hidden reviews only visible to admins
-  if (!review.isVisible && !req.user?.hasRole('admin')) {
-    return res.status(404).json({ success: false, message: 'Review not found' });
+  if (!review.isVisible && !req.user?.hasRole("admin")) {
+    return res
+      .status(404)
+      .json({ success: false, message: "Review not found" });
   }
 
   return res.status(200).json({ success: true, data: review });
@@ -281,25 +285,27 @@ export const updateReview = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid review ID format',
+      message: "Invalid review ID format",
     });
   }
 
   const review = await Review.findById(req.params.id);
 
   if (!review) {
-    return res.status(404).json({ success: false, message: 'Review not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Review not found" });
   }
 
   if (!isReviewOwner(review, req.user)) {
     return res.status(403).json({
       success: false,
-      message: 'You can only edit your own reviews',
+      message: "You can only edit your own reviews",
     });
   }
 
   // Only these fields are mutable by the reviewer
-  const allowedUpdates = ['rating', 'categoryRatings', 'comment'];
+  const allowedUpdates = ["rating", "categoryRatings", "comment"];
   allowedUpdates.forEach((field) => {
     if (req.body[field] !== undefined) review[field] = req.body[field];
   });
@@ -321,20 +327,22 @@ export const deleteReview = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid review ID format',
+      message: "Invalid review ID format",
     });
   }
 
   const review = await Review.findById(req.params.id);
 
   if (!review) {
-    return res.status(404).json({ success: false, message: 'Review not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Review not found" });
   }
 
-  if (!isReviewOwner(review, req.user) && !req.user.hasRole('admin')) {
+  if (!isReviewOwner(review, req.user) && !req.user.hasRole("admin")) {
     return res.status(403).json({
       success: false,
-      message: 'Not authorized to delete this review',
+      message: "Not authorized to delete this review",
     });
   }
 
@@ -359,7 +367,7 @@ export const deleteReview = async (req, res) => {
 
   return res.status(200).json({
     success: true,
-    message: 'Review deleted successfully',
+    message: "Review deleted successfully",
   });
 };
 
@@ -371,27 +379,32 @@ export const addHostResponse = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid review ID format',
+      message: "Invalid review ID format",
     });
   }
 
-  const review = await Review.findById(req.params.id).populate('property', 'host title');
+  const review = await Review.findById(req.params.id).populate(
+    "property",
+    "host title",
+  );
 
   if (!review) {
-    return res.status(404).json({ success: false, message: 'Review not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Review not found" });
   }
 
   // Only the host of the reviewed property can respond
   if (!isPropertyHost(review, req.user)) {
     return res.status(403).json({
       success: false,
-      message: 'Only the property host can respond to this review',
+      message: "Only the property host can respond to this review",
     });
   }
 
   // Overwrite existing response if present (host can update their response)
   review.hostResponse = {
-    comment:     req.body.comment,
+    comment: req.body.comment,
     respondedAt: new Date(),
   };
 
@@ -409,7 +422,7 @@ export const toggleVisibility = async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid review ID format',
+      message: "Invalid review ID format",
     });
   }
 
@@ -418,15 +431,17 @@ export const toggleVisibility = async (req, res) => {
   const review = await Review.findById(req.params.id);
 
   if (!review) {
-    return res.status(404).json({ success: false, message: 'Review not found' });
+    return res
+      .status(404)
+      .json({ success: false, message: "Review not found" });
   }
 
   // No-op check — avoid unnecessary save + hook trigger
   if (review.isVisible === isVisible) {
     return res.status(200).json({
       success: true,
-      message: `Review is already ${isVisible ? 'visible' : 'hidden'}`,
-      data:    review,
+      message: `Review is already ${isVisible ? "visible" : "hidden"}`,
+      data: review,
     });
   }
 
@@ -438,7 +453,7 @@ export const toggleVisibility = async (req, res) => {
 
   return res.status(200).json({
     success: true,
-    message: `Review ${isVisible ? 'made visible' : 'hidden'} successfully`,
-    data:    review,
+    message: `Review ${isVisible ? "made visible" : "hidden"} successfully`,
+    data: review,
   });
 };

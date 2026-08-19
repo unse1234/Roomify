@@ -1,7 +1,7 @@
 // models/review.model.js
 
-import mongoose from 'mongoose';
-import Property from './property.model.js';
+import mongoose from "mongoose";
+import Property from "./property.model.js";
 
 const { Schema } = mongoose;
 
@@ -10,24 +10,24 @@ const { Schema } = mongoose;
 // Each category is optional but overall rating is required
 const categoryRatingSchema = new Schema(
   {
-    cleanliness:   { type: Number, min: 1, max: 5 },
+    cleanliness: { type: Number, min: 1, max: 5 },
     communication: { type: Number, min: 1, max: 5 },
-    checkIn:       { type: Number, min: 1, max: 5 },
-    accuracy:      { type: Number, min: 1, max: 5 }, // listing matches reality?
-    location:      { type: Number, min: 1, max: 5 },
-    value:         { type: Number, min: 1, max: 5 }, // worth the price?
+    checkIn: { type: Number, min: 1, max: 5 },
+    accuracy: { type: Number, min: 1, max: 5 }, // listing matches reality?
+    location: { type: Number, min: 1, max: 5 },
+    value: { type: Number, min: 1, max: 5 }, // worth the price?
   },
-  { _id: false }
+  { _id: false },
 );
 
 // ─── Sub-schema: Host Response ─────────────────────────────────────────────────
 // Host can publicly respond to a guest review — like Airbnb
 const hostResponseSchema = new Schema(
   {
-    comment:     { type: String, trim: true, maxlength: 1000 },
+    comment: { type: String, trim: true, maxlength: 1000 },
     respondedAt: { type: Date, default: Date.now },
   },
-  { _id: false }
+  { _id: false },
 );
 
 // ─── Main Schema ───────────────────────────────────────────────────────────────
@@ -36,13 +36,13 @@ const reviewSchema = new Schema(
     // ── Core References ──────────────────────────────────────────────────────
     property: {
       type: Schema.Types.ObjectId,
-      ref: 'Property',
-      required: [true, 'Property reference is required'],
+      ref: "Property",
+      required: [true, "Property reference is required"],
     },
     reviewer: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Reviewer reference is required'],
+      ref: "User",
+      required: [true, "Reviewer reference is required"],
     },
 
     // Booking reference ensures:
@@ -51,16 +51,16 @@ const reviewSchema = new Schema(
     // 3. Prevents fake/unverified reviews
     booking: {
       type: Schema.Types.ObjectId,
-      ref: 'Booking',
-      required: [true, 'Booking reference is required'],
+      ref: "Booking",
+      required: [true, "Booking reference is required"],
     },
 
     // ── Ratings ──────────────────────────────────────────────────────────────
     rating: {
       type: Number,
-      required: [true, 'Overall rating is required'],
-      min: [1, 'Rating must be at least 1'],
-      max: [5, 'Rating cannot exceed 5'],
+      required: [true, "Overall rating is required"],
+      min: [1, "Rating must be at least 1"],
+      max: [5, "Rating cannot exceed 5"],
     },
 
     // Optional breakdown per category
@@ -69,10 +69,10 @@ const reviewSchema = new Schema(
     // ── Review Content ────────────────────────────────────────────────────────
     comment: {
       type: String,
-      required: [true, 'Review comment is required'],
+      required: [true, "Review comment is required"],
       trim: true,
-      minlength: [10, 'Review must be at least 10 characters'],
-      maxlength: [1000, 'Review cannot exceed 1000 characters'],
+      minlength: [10, "Review must be at least 10 characters"],
+      maxlength: [1000, "Review cannot exceed 1000 characters"],
     },
 
     // ── Host Response ─────────────────────────────────────────────────────────
@@ -87,15 +87,15 @@ const reviewSchema = new Schema(
     // Future-proofing: guest reviews property, host reviews guest
     type: {
       type: String,
-      enum: ['guest_to_property', 'host_to_guest'],
-      default: 'guest_to_property',
+      enum: ["guest_to_property", "host_to_guest"],
+      default: "guest_to_property",
     },
   },
   {
     timestamps: true,
-    toJSON:  { virtuals: true },
+    toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // ─── Indexes ───────────────────────────────────────────────────────────────────
@@ -116,19 +116,19 @@ reviewSchema.index({ reviewer: 1 });
 // This keeps property listing data fresh without expensive aggregation on every fetch
 
 export const recalculatePropertyRating = async (propertyId) => {
-  const result = await mongoose.model('Review').aggregate([
+  const result = await mongoose.model("Review").aggregate([
     {
       $match: {
-        property:  new mongoose.Types.ObjectId(propertyId),
+        property: new mongoose.Types.ObjectId(propertyId),
         isVisible: true,
-        type:      'guest_to_property',
+        type: "guest_to_property",
       },
     },
     {
       $group: {
-        _id:           '$property',
-        averageRating: { $avg: '$rating' },
-        totalReviews:  { $sum: 1 },
+        _id: "$property",
+        averageRating: { $avg: "$rating" },
+        totalReviews: { $sum: 1 },
       },
     },
   ]);
@@ -137,23 +137,27 @@ export const recalculatePropertyRating = async (propertyId) => {
 
   await Property.findByIdAndUpdate(propertyId, {
     averageRating: Math.round(stats.averageRating * 10) / 10, // round to 1 decimal e.g. 4.7
-    totalReviews:  stats.totalReviews,
+    totalReviews: stats.totalReviews,
   });
 };
 
 // Fires after new review is created or existing one is updated
-reviewSchema.post('save', async function () {
+reviewSchema.post("save", async function () {
   await recalculatePropertyRating(this.property);
 });
 
 // Fires after review is deleted via findByIdAndDelete / findOneAndDelete
-reviewSchema.post('findOneAndDelete', async function (doc) {
+reviewSchema.post("findOneAndDelete", async function (doc) {
   if (doc) await recalculatePropertyRating(doc.property);
 });
 
 // Fires after review.deleteOne() is called on a document instance
-reviewSchema.post('deleteOne', { document: true, query: false }, async function () {
-  await recalculatePropertyRating(this.property);
-});
+reviewSchema.post(
+  "deleteOne",
+  { document: true, query: false },
+  async function () {
+    await recalculatePropertyRating(this.property);
+  },
+);
 
-export default mongoose.model('Review', reviewSchema);
+export default mongoose.model("Review", reviewSchema);
