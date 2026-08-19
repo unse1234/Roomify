@@ -1,7 +1,11 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import * as cookie from 'cookie';
+import { logger } from '../utils/logger.js';
 let io;
+
+const getConversationId = (payload) =>
+  typeof payload === 'string' ? payload : payload?.conversationId;
 
 /**
  * Initializes Socket.io on the existing HTTP server and wires up
@@ -23,13 +27,17 @@ export const initializeSocket = (httpServer) => {
       const rawCookies = socket.handshake.headers.cookie;
       if (!rawCookies) return next(new Error('Authentication required'));
 
-      const { token } = cookie.parse(rawCookies);
+      const { jwt: token } = cookie.parse(rawCookies);
       if (!token) return next(new Error('Authentication required'));
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.userId = decoded.id;
       next();
     } catch (error) {
+      logger.warn('socket_auth_failed', {
+        errorName: error.name,
+        errorMessage: error.message,
+      });
       next(new Error('Authentication failed'));
     }
   });
@@ -48,14 +56,18 @@ export const initializeSocket = (httpServer) => {
       socket.leave(`conversation:${conversationId}`);
     });
 
-    socket.on('typing_start', ({ conversationId }) => {
+    socket.on('typing_start', (payload) => {
+      const conversationId = getConversationId(payload);
+      if (!conversationId) return;
       socket.to(`conversation:${conversationId}`).emit('typing_start', {
         conversationId,
         userId: socket.userId,
       });
     });
 
-    socket.on('typing_stop', ({ conversationId }) => {
+    socket.on('typing_stop', (payload) => {
+      const conversationId = getConversationId(payload);
+      if (!conversationId) return;
       socket.to(`conversation:${conversationId}`).emit('typing_stop', {
         conversationId,
         userId: socket.userId,
