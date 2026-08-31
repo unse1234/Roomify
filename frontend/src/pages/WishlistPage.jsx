@@ -2,7 +2,8 @@
 import Navbar from '../components/layout/Navbar.jsx';
 import BottomNav from '../components/layout/BottomNav.jsx';
 import ListingCard from '../components/listing/ListingCard.jsx';
-import { EmptyState, ErrorState, PageShell, SkeletonBlock } from '../components/common/StateViews.jsx';
+import ListingCardSkeleton from '../components/listing/ListingCardSkeleton.jsx';
+import { EmptyState, ErrorState, PageShell } from '../components/common/StateViews.jsx';
 import { getWishlist, toggleWishlist } from '../services/property.service.js';
 import { getApiErrorMessage, getApiErrorRequestId } from '../utils/apiError.js';
 
