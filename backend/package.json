@@ -8,7 +8,8 @@
     "test": "node --test src/tests/*.test.js",
     "dev": "npx nodemon server.js",
     "seed": "node scripts/seed.js",
-    "rebuild:chat-previews": "node scripts/rebuild-chat-previews.js"
+    "rebuild:chat-previews": "node scripts/rebuild-chat-previews.js",
+    "migrate:chat-pairkey": "node scripts/migrate-conversation-pairkey.js"
   },
   "keywords": [],
   "author": "",

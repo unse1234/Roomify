@@ -36,7 +36,14 @@ const ListingDetail = () => {
 
   const contactMutation = useMutation({
     mutationFn: startConversation,
-    onSuccess: (res) => navigate(`/messages/${res.data?._id}`),
+    onSuccess: (res) => {
+      const conversationId = res?.data?._id;
+      if (!conversationId) {
+        setContactError('Could not start a conversation. Please try again.');
+        return;
+      }
+      navigate(`/messages/${conversationId}`);
+    },
     onError: (err) => setContactError(getApiErrorMessage(err, 'Could not start a conversation.')),
   });
 

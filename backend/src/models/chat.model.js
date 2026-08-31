@@ -31,6 +31,25 @@ const conversationSchema = new Schema(
       },
     },
 
+    /**
+     * SYSTEM DESIGN — Deterministic pair key for the uniqueness rule
+     * The invariant we need is "one conversation per PAIR of users per
+     * property". That can't be expressed as a unique index on the
+     * `participants` array: an array index is multikey, so `unique`
+     * would apply to each participant id individually ("one
+     * conversation per PERSON per property") — the wrong rule.
+     *
+     * Instead we store the two participant ids, sorted and joined,
+     * as a single scalar string. The compound unique index below is
+     * then on plain scalar fields and enforces exactly the pair-level
+     * rule. Set only server-side in startConversation — never from
+     * client input.
+     */
+    pairKey: {
+      type: String,
+      required: true,
+    },
+
     // Ties the conversation to the listing that started it
     // (e.g. a guest messaging a host from a property page).
     // Optional so general (non-property) chats are still possible.
@@ -76,12 +95,15 @@ const conversationSchema = new Schema(
 /**
  * SYSTEM DESIGN — Compound unique index
  * Prevents duplicate conversations between the same two users
- * about the same property. Enforced at the DB level (not just in
+ * about the same property. Keyed on the scalar `pairKey` (not the
+ * `participants` array — see the field comment above) so the
+ * constraint is "one per pair per property", and it still holds
+ * when `property` is null. Enforced at the DB level (not just in
  * the controller), so it stays correct even under concurrent
  * "start chat" requests — the same guarantee we already rely on
  * for booking double-booking prevention.
  */
-conversationSchema.index({ participants: 1, property: 1 }, { unique: true });
+conversationSchema.index({ pairKey: 1, property: 1 }, { unique: true });
 
 // Fast "list my conversations, most recently active first" query,
 // used directly by the inbox endpoint.

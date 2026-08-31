@@ -50,30 +50,32 @@ const rebuildConversationPreview = async (conversationId, session) => {
  * property), or returns the existing one if it already exists.
  */
 export const startConversation = async (req, res) => {
+  const senderId = req.user._id;
+  const { recipientId, propertyId = null } = req.body;
+
+  if (!recipientId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "recipientId is required" });
+  }
+
+  if (String(recipientId) === String(senderId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Cannot start a conversation with yourself",
+    });
+  }
+
+  // Sorted so the same pair always produces the same key, regardless
+  // of who initiates. `pairKey` is the scalar the unique index is on;
+  // `participants` is still stored for population and inbox queries.
+  const participants = [String(senderId), String(recipientId)].sort();
+  const pairKey = participants.join("_");
+
   try {
-    const senderId = req.user._id;
-    const { recipientId, propertyId = null } = req.body;
-
-    if (!recipientId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "recipientId is required" });
-    }
-
-    if (String(recipientId) === String(senderId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot start a conversation with yourself",
-      });
-    }
-
-    // Sorted so the same pair always maps to the same array value,
-    // regardless of who initiates the conversation.
-    const participants = [String(senderId), String(recipientId)].sort();
-
     const conversation = await Conversation.findOneAndUpdate(
-      { participants, property: propertyId },
-      { $setOnInsert: { participants, property: propertyId } },
+      { pairKey, property: propertyId },
+      { $setOnInsert: { participants, property: propertyId, pairKey } },
       { new: true, upsert: true, setDefaultsOnInsert: true },
     )
       .populate("participants", "name avatar")
@@ -81,21 +83,24 @@ export const startConversation = async (req, res) => {
 
     return res.status(200).json({ success: true, data: conversation });
   } catch (error) {
-    // Two simultaneous requests can both attempt an insert; one loses
-    // to the unique index. Treat that race as a success, not an error.
+    // Two simultaneous requests can both attempt the insert; one loses
+    // to the unique index. Re-read by the same key the index is on —
+    // for a genuine race the winner's row is now there, so return it.
     if (error.code === 11000) {
-      const senderId = req.user._id;
-      const { recipientId, propertyId = null } = req.body;
-      const participants = [String(senderId), String(recipientId)].sort();
-
-      const existing = await Conversation.findOne({
-        participants,
-        property: propertyId,
-      })
+      const existing = await Conversation.findOne({ pairKey, property: propertyId })
         .populate("participants", "name avatar")
         .populate("property", "title images");
 
-      return res.status(200).json({ success: true, data: existing });
+      if (existing) {
+        return res.status(200).json({ success: true, data: existing });
+      }
+
+      // Unique-key conflict with no row to hand back: a real conflict,
+      // not a race we can absorb. Report it as one — never 200 + null.
+      return res.status(409).json({
+        success: false,
+        message: "Could not start the conversation. Please try again.",
+      });
     }
 
     return res
