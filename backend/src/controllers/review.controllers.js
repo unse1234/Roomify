@@ -191,7 +191,7 @@ export const getPropertyReviews = async (req, res) => {
     type: "guest_to_property",
   };
 
-  const [reviews, total] = await Promise.all([
+  const [reviews, total, property] = await Promise.all([
     Review.find(filter)
       .populate("reviewer", "name")
       .sort(SORT_MAP[sort] ?? SORT_MAP.newest)
@@ -199,12 +199,9 @@ export const getPropertyReviews = async (req, res) => {
       .limit(limit)
       .lean(),
     Review.countDocuments(filter),
+    // Denormalized stats — fetched in parallel rather than after.
+    Property.findById(propertyId).select("averageRating totalReviews").lean(),
   ]);
-
-  // Fetch denormalized stats from property — avoids re-aggregating
-  const property = await Property.findById(propertyId)
-    .select("averageRating totalReviews")
-    .lean();
 
   return res.status(200).json({
     success: true,

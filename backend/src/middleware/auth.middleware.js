@@ -14,7 +14,10 @@ const protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, config.JWT_SECRET);
 
-    req.user = await User.findById(decoded.id);
+    // Only the fields authorization and the /me response actually use. Avoids
+    // loading the full user document (notably the unbounded wishlist array)
+    // on every authenticated request.
+    req.user = await User.findById(decoded.id).select("_id name email roles avatar");
 
     if (!req.user) {
       return next(unauthenticated("Your session has expired. Please sign in again.", ERROR_CODES.AUTH_SESSION_EXPIRED));
