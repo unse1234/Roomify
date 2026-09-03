@@ -38,6 +38,10 @@ export const notFound = (message, code = ERROR_CODES.NOT_FOUND) =>
 export const conflict = (message, details = null, code = ERROR_CODES.CONFLICT) =>
   new AppError({ code, message, statusCode: 409, details });
 
+export const rateLimited = (
+  message = getDefaultClientMessage(ERROR_CODES.RATE_LIMITED),
+) => new AppError({ code: ERROR_CODES.RATE_LIMITED, message, statusCode: 429 });
+
 export const validationError = (details, message = getDefaultClientMessage(ERROR_CODES.VALIDATION_ERROR)) =>
   new AppError({
     code: ERROR_CODES.VALIDATION_ERROR,

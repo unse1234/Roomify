@@ -10,6 +10,7 @@ import bookingRoutes from "./routes/booking.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
 import { config } from "./config/config.js";
+import { apiLimiter, writeLimiter } from "./middleware/rateLimit.middleware.js";
 import { requestContext, requestLogger } from "./middleware/requestContext.middleware.js";
 import { normalizeErrorResponses } from "./middleware/errorResponse.middleware.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
@@ -62,6 +63,11 @@ app.get("/health", (req, res) => {
     message: "Roomify API is running",
   });
 });
+
+// Coarse global ceiling, then a stricter ceiling on writes. Auth routes add
+// their own stricter limiter on top.
+app.use(apiLimiter);
+app.use(writeLimiter);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
