@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import Navbar from "../components/layout/Navbar.jsx";
@@ -60,7 +60,10 @@ const ConversationPage = () => {
     },
   });
 
-  const messages = [...(messagesQuery.data?.data || [])].reverse();
+  const messages = useMemo(
+    () => [...(messagesQuery.data?.data || [])].reverse(),
+    [messagesQuery.data],
+  );
 
   return (
     <div className="min-h-screen bg-white">

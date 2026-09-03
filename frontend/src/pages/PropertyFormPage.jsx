@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar.jsx';
@@ -93,6 +93,17 @@ const PropertyFormContent = ({ id, isEdit, initialForm }) => {
   const [files, setFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [apiError, setApiError] = useState(null);
+
+  // Create object URLs once per file selection and revoke them on change /
+  // unmount — previously they were minted in render and never freed.
+  const previews = useMemo(
+    () => files.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    [files],
+  );
+  useEffect(
+    () => () => previews.forEach((preview) => URL.revokeObjectURL(preview.url)),
+    [previews],
+  );
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -220,8 +231,8 @@ const PropertyFormContent = ({ id, isEdit, initialForm }) => {
           </label>
           {files.length > 0 && (
             <div className="mt-3 grid grid-cols-3 gap-2">
-              {files.map((file) => (
-                <img key={`${file.name}-${file.lastModified}`} src={URL.createObjectURL(file)} alt="" className="aspect-square rounded-sm object-cover" />
+              {previews.map(({ file, url }) => (
+                <img key={`${file.name}-${file.lastModified}`} src={url} alt={`Preview of ${file.name}`} className="aspect-square rounded-sm object-cover" />
               ))}
             </div>
           )}
