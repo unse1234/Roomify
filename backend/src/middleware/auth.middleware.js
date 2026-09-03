@@ -24,7 +24,7 @@ const protect = async (req, res, next) => {
     }
 
     return next();
-  } catch (error) {
+  } catch {
     return next(unauthenticated("Your session has expired. Please sign in again.", ERROR_CODES.AUTH_SESSION_EXPIRED));
   }
 };

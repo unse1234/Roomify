@@ -57,7 +57,6 @@ if (!parsed.success) {
   const lines = parsed.error.issues.map(
     (issue) => `  - ${issue.path.join(".") || "config"}: ${issue.message}`,
   );
-  // eslint-disable-next-line no-console
   console.error(
     `\nInvalid backend configuration — fix your environment (.env):\n${lines.join("\n")}\n`,
   );
@@ -69,7 +68,6 @@ const explicitWebOrigin = env.FRONTEND_URL || env.CLIENT_URL;
 const webOrigin = explicitWebOrigin || "http://localhost:5173";
 
 if (env.NODE_ENV === "production" && !explicitWebOrigin) {
-  // eslint-disable-next-line no-console
   console.warn(
     "[config] NODE_ENV=production but FRONTEND_URL is not set — CORS is " +
       `restricted to ${webOrigin}, which is almost certainly wrong for a deployed site.`,

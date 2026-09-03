@@ -3,6 +3,7 @@ import globals from 'globals'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import prettier from 'eslint-config-prettier'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
@@ -27,8 +28,13 @@ export default defineConfig([
       react,
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // jsx-uses-vars marks components referenced in JSX as "used", so the
+      // unused-vars pattern can be narrow. The old ^[A-Z_] pattern silenced
+      // every unused component import, which is how F-01 slipped through.
+      'react/jsx-uses-vars': 'error',
       'react/jsx-no-undef': 'error',
+      'no-unused-vars': ['error', { varsIgnorePattern: '^_', args: 'none' }],
     },
   },
+  prettier,
 ])

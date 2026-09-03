@@ -32,7 +32,7 @@ const seed = async () => {
   ]);
 
   // ── Users ──────────────────────────────────────────────
-  const [admin, host1, host2, guest1, guest2, guest3] = await User.create([
+  const [, host1, host2, guest1, guest2, guest3] = await User.create([
     { name: 'Admin User', email: 'admin@roomify.test', password: 'Password123', roles: ['admin'] },
     { name: 'Ahmed Raza', email: 'ahmed.host@roomify.test', password: 'Password123', roles: ['host'] },
     { name: 'Sara Khan', email: 'sara.host@roomify.test', password: 'Password123', roles: ['host'] },

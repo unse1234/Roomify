@@ -169,7 +169,7 @@ bookingSchema.virtual('nights').get(function () {
 
 // checkOut must be strictly after checkIn
 // Runs on create and on save — catches invalid date ranges early
-bookingSchema.pre('validate', function (next) {
+bookingSchema.pre('validate', function () {
   if (this.checkIn && this.checkOut) {
     if (this.checkOut <= this.checkIn) {
       this.invalidate('checkOut', 'Check-out date must be after check-in date');
