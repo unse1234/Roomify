@@ -321,7 +321,8 @@ export const getWishlist = async (req, res) => {
   });
 };
 
-export const toggleWishlist = async (req, res) => {
+// PUT /api/properties/:id/wishlist — idempotent add.
+export const addToWishlist = async (req, res) => {
   const property = await Property.findById(req.params.id)
     .select("_id status")
     .lean();
@@ -330,21 +331,33 @@ export const toggleWishlist = async (req, res) => {
     return res.status(404).json({ message: "Property not found" });
   }
 
-  const user = await User.findById(req.user._id).select("wishlist");
-  const propertyId = property._id.toString();
-  const exists = user.wishlist.some((id) => id.toString() === propertyId);
-
-  if (exists) {
-    user.wishlist = user.wishlist.filter((id) => id.toString() !== propertyId);
-  } else {
-    user.wishlist.push(property._id);
-  }
-
-  await user.save();
+  // $addToSet is atomic and a no-op if the id is already present, so a
+  // retried request cannot double-add and two concurrent requests cannot
+  // lose an update.
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $addToSet: { wishlist: property._id } },
+    { new: true, select: "wishlist" },
+  );
 
   res.status(200).json({
     success: true,
-    wishlisted: !exists,
+    wishlisted: true,
+    data: user.wishlist,
+  });
+};
+
+// DELETE /api/properties/:id/wishlist — idempotent remove.
+export const removeFromWishlist = async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $pull: { wishlist: req.params.id } },
+    { new: true, select: "wishlist" },
+  );
+
+  res.status(200).json({
+    success: true,
+    wishlisted: false,
     data: user.wishlist,
   });
 };

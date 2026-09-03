@@ -8,7 +8,8 @@ import {
   deleteProperty,
   getHostProperties,
   getWishlist,
-  toggleWishlist,
+  addToWishlist,
+  removeFromWishlist,
 } from "../controllers/property.controllers.js";
 import protect from "../middleware/auth.middleware.js";
 import authorize from "../middleware/role.middleware.js";
@@ -40,7 +41,8 @@ router.get(
   getHostProperties,
 );
 router.get("/wishlist", protect, getWishlist);
-router.patch("/:id/wishlist", protect, toggleWishlist);
+router.put("/:id/wishlist", protect, addToWishlist);
+router.delete("/:id/wishlist", protect, removeFromWishlist);
 router.get("/", getAllProperties);
 router.get("/:id", getPropertyById);
 export default router;

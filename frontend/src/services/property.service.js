@@ -34,5 +34,12 @@ export const updatePropertyStatus = (id, status) =>
 export const getWishlist = () =>
   api.get('/properties/wishlist').then((res) => res.data);
 
-export const toggleWishlist = (id) =>
-  api.patch(`/properties/${id}/wishlist`).then((res) => res.data);
+export const addToWishlist = (id) =>
+  api.put(`/properties/${id}/wishlist`).then((res) => res.data);
+
+export const removeFromWishlist = (id) =>
+  api.delete(`/properties/${id}/wishlist`).then((res) => res.data);
+
+// Idempotent per intent: pass the CURRENT saved state, get the opposite.
+export const setWishlisted = (id, wishlisted) =>
+  wishlisted ? removeFromWishlist(id) : addToWishlist(id);

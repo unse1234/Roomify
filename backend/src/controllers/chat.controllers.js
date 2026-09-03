@@ -181,7 +181,6 @@ export const getMessages = async (req, res) => {
  * two writes can't drift out of sync if something fails mid-way.
  */
 export const sendMessage = async (req, res) => {
-  const session = await mongoose.startSession();
   try {
     const senderId = req.user._id;
     const { conversationId } = req.params;
@@ -205,30 +204,28 @@ export const sendMessage = async (req, res) => {
       (p) => p.toString() !== senderId.toString(),
     );
 
-    let message;
-    await session.withTransaction(async () => {
-      const created = await Message.create(
-        [
-          {
-            conversation: conversationId,
-            sender: senderId,
-            content: content.trim(),
-          },
-        ],
-        { session },
-      );
-      message = created[0];
-
-      const currentUnread =
-        conversation.unreadCounts.get(recipientId.toString()) || 0;
-      conversation.unreadCounts.set(recipientId.toString(), currentUnread + 1);
-      conversation.lastMessage = {
-        content: message.content,
-        sender: senderId,
-        sentAt: message.createdAt,
-      };
-      await conversation.save({ session });
+    const message = await Message.create({
+      conversation: conversationId,
+      sender: senderId,
+      content: content.trim(),
     });
+
+    // Both writes in one atomic update: $inc so concurrent messages can't
+    // lose an increment, $set for the denormalized preview. No transaction
+    // needed — if this ever drifts, scripts/rebuild-chat-previews.js repairs it.
+    await Conversation.updateOne(
+      { _id: conversationId },
+      {
+        $inc: { [`unreadCounts.${recipientId}`]: 1 },
+        $set: {
+          lastMessage: {
+            content: message.content,
+            sender: senderId,
+            sentAt: message.createdAt,
+          },
+        },
+      },
+    );
 
     await message.populate("sender", "name avatar");
 
@@ -244,8 +241,6 @@ export const sendMessage = async (req, res) => {
       success: false,
       message: error.message || "Failed to send message",
     });
-  } finally {
-    session.endSession();
   }
 };
 
@@ -272,8 +267,10 @@ export const markConversationAsRead = async (req, res) => {
       { $set: { isRead: true, readAt: new Date() } },
     );
 
-    conversation.unreadCounts.set(userId.toString(), 0);
-    await conversation.save();
+    await Conversation.updateOne(
+      { _id: conversationId },
+      { $set: { [`unreadCounts.${userId}`]: 0 } },
+    );
 
     getIO().to(`conversation:${conversationId}`).emit("conversation_read", {
       conversationId,

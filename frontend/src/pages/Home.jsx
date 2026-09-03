@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { SlidersHorizontal, Search, MapPin, Home as HomeIcon, Building2, Warehouse, TentTree, TreePine, LocateFixed } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { getProperties, getWishlist, toggleWishlist } from '../services/property.service.js';
+import { getProperties, getWishlist, setWishlisted } from '../services/property.service.js';
 import Navbar from '../components/layout/Navbar.jsx';
 import ListingCard from '../components/listing/ListingCard.jsx';
 import ListingCardSkeleton from '../components/listing/ListingCardSkeleton.jsx';
@@ -115,7 +115,7 @@ const Home = () => {
   });
 
   const wishlistMutation = useMutation({
-    mutationFn: toggleWishlist,
+    mutationFn: ({ id, wishlisted }) => setWishlisted(id, wishlisted),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wishlist'] });
       queryClient.invalidateQueries({ queryKey: ['properties'] });
@@ -268,7 +268,7 @@ const Home = () => {
                       key={property._id}
                       property={property}
                       wishlisted={wishlistIds.has(property._id)}
-                      onToggleWishlist={user ? () => wishlistMutation.mutate(property._id) : undefined}
+                      onToggleWishlist={user ? () => wishlistMutation.mutate({ id: property._id, wishlisted: wishlistIds.has(property._id) }) : undefined}
                       isWishlistPending={wishlistMutation.isPending}
                     />
                   ))}
