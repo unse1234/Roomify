@@ -24,6 +24,36 @@ export const ErrorState = ({ title = 'Could not load this page', message, reques
   </div>
 );
 
+export const Pager = ({ page, totalPages, onChange }) => {
+  const total = Number(totalPages) || 1;
+  const current = Number(page) || 1;
+  if (total <= 1) return null;
+
+  return (
+    <div className="mt-8 flex items-center justify-center gap-2">
+      <button
+        type="button"
+        className="btn-secondary"
+        disabled={current <= 1}
+        onClick={() => onChange(current - 1)}
+      >
+        Previous
+      </button>
+      <span className="px-3 text-sm text-muted">
+        Page {current} of {total}
+      </span>
+      <button
+        type="button"
+        className="btn-secondary"
+        disabled={current >= total}
+        onClick={() => onChange(current + 1)}
+      >
+        Next
+      </button>
+    </div>
+  );
+};
+
 export const EmptyState = ({ title, message, action }) => (
   <div className="rounded-md border border-hairline bg-white p-10 text-center">
     <h2 className="text-xl font-semibold text-ink">{title}</h2>

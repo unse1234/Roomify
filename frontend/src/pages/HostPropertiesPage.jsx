@@ -1,17 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar.jsx';
+import BottomNav from '../components/layout/BottomNav.jsx';
 import { deleteProperty, getHostProperties } from '../services/property.service.js';
-import { EmptyState, ErrorState, PageShell, SkeletonBlock } from '../components/common/StateViews.jsx';
+import { EmptyState, ErrorState, PageShell, Pager, SkeletonBlock } from '../components/common/StateViews.jsx';
 import { formatAddress, formatMoney, getCoverImage } from '../utils/formatters.js';
 import { getApiErrorMessage, getApiErrorRequestId } from '../utils/apiError.js';
 
 const HostPropertiesPage = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get('page') || 1);
   const propertiesQuery = useQuery({
-    queryKey: ['properties', 'host'],
-    queryFn: getHostProperties,
+    queryKey: ['properties', 'host', { page }],
+    queryFn: () => getHostProperties({ page }),
   });
   const deleteMutation = useMutation({
     mutationFn: deleteProperty,
@@ -44,6 +47,7 @@ const HostPropertiesPage = () => {
         ) : properties.length === 0 ? (
           <EmptyState title="No properties yet" message="Create your first Roomify listing and start hosting." action={<Link to="/host/properties/new" className="btn-primary">Create property</Link>} />
         ) : (
+          <>
           <div className="grid gap-5 md:grid-cols-2">
             {properties.map((property) => {
               const cover = getCoverImage(property);
@@ -74,8 +78,15 @@ const HostPropertiesPage = () => {
               );
             })}
           </div>
+          <Pager
+            page={page}
+            totalPages={propertiesQuery.data?.totalPages}
+            onChange={(next) => setSearchParams({ page: String(next) })}
+          />
+          </>
         )}
       </PageShell>
+      <BottomNav />
     </div>
   );
 };

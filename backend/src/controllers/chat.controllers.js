@@ -117,19 +117,31 @@ export const startConversation = async (req, res) => {
 export const getMyConversations = async (req, res) => {
   try {
     const userId = req.user._id;
+    const { page, limit } = req.query;
+    const filter = { participants: userId };
 
-    const conversations = await Conversation.find({ participants: userId })
-      .sort({ updatedAt: -1 })
-      .populate("participants", "name avatar")
-      .populate("property", "title images")
-      .lean();
+    const [conversations, total] = await Promise.all([
+      Conversation.find(filter)
+        .sort({ updatedAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate("participants", "name avatar")
+        .populate("property", "title images")
+        .lean(),
+      Conversation.countDocuments(filter),
+    ]);
 
     const data = conversations.map(({ unreadCounts, ...conv }) => ({
       ...conv,
       unreadCount: unreadCounts?.[userId.toString()] || 0,
     }));
 
-    return res.status(200).json({ success: true, data });
+    return res.status(200).json({
+      success: true,
+      page,
+      totalPages: Math.ceil(total / limit),
+      data,
+    });
   } catch {
     return res
       .status(500)

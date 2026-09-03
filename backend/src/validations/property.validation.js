@@ -87,6 +87,12 @@ export const updatePropertySchema = z.object({
   address: jsonField(addressSchema).optional(),
 });
 
+// Generic page/limit for the previously-unbounded list endpoints (F-16).
+export const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 export const listPropertiesQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
 

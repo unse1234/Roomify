@@ -4,7 +4,7 @@ import { CalendarX } from 'lucide-react';
 import Navbar from '../components/layout/Navbar.jsx';
 import BottomNav from '../components/layout/BottomNav.jsx';
 import { cancelBooking, getMyBookings } from '../services/booking.service.js';
-import { EmptyState, ErrorState, PageShell, SkeletonBlock } from '../components/common/StateViews.jsx';
+import { EmptyState, ErrorState, PageShell, Pager, SkeletonBlock } from '../components/common/StateViews.jsx';
 import { formatAddress, formatDate, formatMoney, getCoverImage } from '../utils/formatters.js';
 import { getApiErrorMessage, getApiErrorRequestId } from '../utils/apiError.js';
 
@@ -85,11 +85,18 @@ const BookingsPage = () => {
         ) : bookings.length === 0 ? (
           <EmptyState title="No bookings yet" message="When you book a stay, it will appear here." action={<Link to="/" className="btn-primary">Explore stays</Link>} />
         ) : (
-          <div className="space-y-4">
-            {bookings.map((booking) => (
-              <BookingRow key={booking._id} booking={booking} onCancel={cancelMutation.mutate} isCancelling={cancelMutation.isPending} />
-            ))}
-          </div>
+          <>
+            <div className="space-y-4">
+              {bookings.map((booking) => (
+                <BookingRow key={booking._id} booking={booking} onCancel={cancelMutation.mutate} isCancelling={cancelMutation.isPending} />
+              ))}
+            </div>
+            <Pager
+              page={page}
+              totalPages={bookingsQuery.data?.totalPages}
+              onChange={(next) => setSearchParams(status ? { status, page: String(next) } : { page: String(next) })}
+            />
+          </>
         )}
       </PageShell>
       <BottomNav />

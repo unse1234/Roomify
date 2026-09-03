@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "../components/layout/Navbar.jsx";
 import BottomNav from "../components/layout/BottomNav.jsx";
 import { getConversations } from "../services/chat.service.js";
@@ -7,6 +7,7 @@ import {
   EmptyState,
   ErrorState,
   PageShell,
+  Pager,
   SkeletonBlock,
 } from "../components/common/StateViews.jsx";
 import { formatDate, getCoverImage } from "../utils/formatters.js";
@@ -15,9 +16,11 @@ import { useChatSocket } from "../hooks/useChatSocket.js";
 
 const MessagesPage = () => {
   useChatSocket();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get("page") || 1);
   const conversationsQuery = useQuery({
-    queryKey: ["conversations"],
-    queryFn: getConversations,
+    queryKey: ["conversations", { page }],
+    queryFn: () => getConversations({ page }),
   });
   const conversations = conversationsQuery.data?.data || [];
 
@@ -92,6 +95,11 @@ const MessagesPage = () => {
               })}
             </div>
           )}
+          <Pager
+            page={page}
+            totalPages={conversationsQuery.data?.totalPages}
+            onChange={(next) => setSearchParams({ page: String(next) })}
+          />
         </div>
       </PageShell>
       <BottomNav />

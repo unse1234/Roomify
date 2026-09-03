@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar.jsx';
+import BottomNav from '../components/layout/BottomNav.jsx';
 import { confirmBooking, cancelBooking, getHostBookings } from '../services/booking.service.js';
-import { EmptyState, ErrorState, PageShell, SkeletonBlock } from '../components/common/StateViews.jsx';
+import { EmptyState, ErrorState, PageShell, Pager, SkeletonBlock } from '../components/common/StateViews.jsx';
 import { formatAddress, formatDate, formatMoney } from '../utils/formatters.js';
 import { getApiErrorMessage, getApiErrorRequestId } from '../utils/apiError.js';
 
@@ -49,6 +50,7 @@ const HostBookingsPage = () => {
         ) : bookings.length === 0 ? (
           <EmptyState title="No host bookings" message="Guest booking requests for your properties will appear here." />
         ) : (
+          <>
           <div className="space-y-4">
             {bookings.map((booking) => (
               <article key={booking._id} className="rounded-md border border-hairline p-5 shadow-card">
@@ -75,8 +77,15 @@ const HostBookingsPage = () => {
               </article>
             ))}
           </div>
+          <Pager
+            page={page}
+            totalPages={bookingsQuery.data?.totalPages}
+            onChange={(next) => setSearchParams(status ? { status, page: String(next) } : { page: String(next) })}
+          />
+          </>
         )}
       </PageShell>
+      <BottomNav />
     </div>
   );
 };

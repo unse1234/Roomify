@@ -17,6 +17,7 @@ import upload from "../middleware/upload.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import {
   listPropertiesQuerySchema,
+  paginationQuerySchema,
   createPropertySchema,
   updatePropertySchema,
 } from "../validations/property.validation.js";
@@ -46,9 +47,15 @@ router.get(
   "/host/my-properties",
   protect,
   authorize("host"),
+  validate(paginationQuerySchema, "query"),
   getHostProperties,
 );
-router.get("/wishlist", protect, getWishlist);
+router.get(
+  "/wishlist",
+  protect,
+  validate(paginationQuerySchema, "query"),
+  getWishlist,
+);
 router.put("/:id/wishlist", protect, addToWishlist);
 router.delete("/:id/wishlist", protect, removeFromWishlist);
 router.get("/", validate(listPropertiesQuerySchema, "query"), getAllProperties);

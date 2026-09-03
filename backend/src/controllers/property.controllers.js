@@ -252,21 +252,37 @@ export const deleteProperty = async (req, res) => {
 };
 
 export const getHostProperties = async (req, res) => {
-  const properties = await Property.find({ host: req.user._id })
-    .sort("-createdAt")
-    .lean();
+  const { page, limit } = req.query;
+  const skip = (page - 1) * limit;
 
-  res
-    .status(200)
-    .json({ success: true, count: properties.length, data: properties });
+  const [properties, total] = await Promise.all([
+    Property.find({ host: req.user._id })
+      .sort("-createdAt")
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Property.countDocuments({ host: req.user._id }),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    count: properties.length,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+    data: properties,
+  });
 };
 
 export const getWishlist = async (req, res) => {
+  const { page, limit } = req.query;
+
   const user = await User.findById(req.user._id)
     .populate({
       path: "wishlist",
       match: { status: "active" },
       populate: { path: "host", select: "name email" },
+      options: { sort: { createdAt: -1 }, skip: (page - 1) * limit, limit },
     })
     .lean();
 
@@ -275,6 +291,7 @@ export const getWishlist = async (req, res) => {
   res.status(200).json({
     success: true,
     count: wishlist.length,
+    page,
     data: wishlist,
   });
 };

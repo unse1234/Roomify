@@ -1,22 +1,24 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Star, Trash2 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar.jsx';
 import BottomNav from '../components/layout/BottomNav.jsx';
 import { deleteReview, getMyReviews, updateReview } from '../services/review.service.js';
-import { EmptyState, ErrorState, PageShell, SkeletonBlock } from '../components/common/StateViews.jsx';
+import { EmptyState, ErrorState, PageShell, Pager, SkeletonBlock } from '../components/common/StateViews.jsx';
 import { formatAddress } from '../utils/formatters.js';
 import { getApiErrorMessage, getApiErrorRequestId } from '../utils/apiError.js';
 
 const ReviewsPage = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get('page') || 1);
   const [editingId, setEditingId] = useState('');
   const [draft, setDraft] = useState({ rating: 5, comment: '' });
 
   const reviewsQuery = useQuery({
-    queryKey: ['reviews', 'mine'],
-    queryFn: () => getMyReviews({ page: 1, limit: 20, sort: 'newest' }),
+    queryKey: ['reviews', 'mine', { page }],
+    queryFn: () => getMyReviews({ page, limit: 20, sort: 'newest' }),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['reviews'] });
@@ -43,6 +45,7 @@ const ReviewsPage = () => {
           ) : reviews.length === 0 ? (
             <EmptyState title="No reviews yet" message="After a completed stay, you can review it from the booking detail page." />
           ) : (
+            <>
             <div className="space-y-4">
               {reviews.map((review) => {
                 const editing = editingId === review._id;
@@ -81,6 +84,12 @@ const ReviewsPage = () => {
                 );
               })}
             </div>
+            <Pager
+              page={page}
+              totalPages={reviewsQuery.data?.totalPages}
+              onChange={(next) => setSearchParams({ page: String(next) })}
+            />
+            </>
           )}
         </div>
       </PageShell>

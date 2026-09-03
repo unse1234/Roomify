@@ -1,7 +1,7 @@
 import api from './api.js';
 
-export const getConversations = () =>
-  api.get('/chat/conversations').then((res) => res.data);
+export const getConversations = (params = {}) =>
+  api.get('/chat/conversations', { params }).then((res) => res.data);
 
 export const startConversation = (data) =>
   api.post('/chat/conversations', data).then((res) => res.data);

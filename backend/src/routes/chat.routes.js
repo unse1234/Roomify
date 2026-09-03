@@ -13,6 +13,7 @@ import {
   startConversationSchema,
   sendMessageSchema,
   getMessagesQuerySchema,
+  conversationsQuerySchema,
 } from "../validations/chat.validation.js";
 
 const router = Router();
@@ -25,7 +26,11 @@ router.post(
   validate(startConversationSchema, "body"),
   startConversation,
 );
-router.get("/conversations", getMyConversations);
+router.get(
+  "/conversations",
+  validate(conversationsQuerySchema, "query"),
+  getMyConversations,
+);
 
 router.get(
   "/conversations/:conversationId/messages",

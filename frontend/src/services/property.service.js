@@ -6,8 +6,8 @@ export const getProperties = (params = {}) =>
 export const getPropertyById = (id) =>
   api.get(`/properties/${id}`).then((res) => res.data);
 
-export const getHostProperties = () =>
-  api.get('/properties/host/my-properties').then((res) => res.data);
+export const getHostProperties = (params = {}) =>
+  api.get('/properties/host/my-properties', { params }).then((res) => res.data);
 
 export const createProperty = (formData, onUploadProgress) =>
   api
