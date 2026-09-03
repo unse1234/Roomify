@@ -32,9 +32,3 @@ export const EmptyState = ({ title, message, action }) => (
   </div>
 );
 
-export const InlineError = ({ message }) =>
-  message ? (
-    <div className="rounded-sm border border-[#f3b6a8] bg-[#fff4f1] px-3 py-2 text-sm text-error">
-      {message}
-    </div>
-  ) : null;

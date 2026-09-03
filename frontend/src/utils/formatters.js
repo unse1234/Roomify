@@ -19,7 +19,10 @@ export const formatDate = (date) => {
 
 export const formatAddress = (address) => {
   if (!address) return 'Location not provided';
-  return [address.area, address.city, address.country].filter(Boolean).join(', ') || 'Location not provided';
+  return (
+    [address.street, address.city, address.country].filter(Boolean).join(', ') ||
+    'Location not provided'
+  );
 };
 
 export const formatAmenity = (amenity) =>
