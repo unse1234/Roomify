@@ -9,7 +9,8 @@
     "dev": "npx nodemon server.js",
     "seed": "node scripts/seed.js",
     "rebuild:chat-previews": "node scripts/rebuild-chat-previews.js",
-    "migrate:chat-pairkey": "node scripts/migrate-conversation-pairkey.js"
+    "migrate:chat-pairkey": "node scripts/migrate-conversation-pairkey.js",
+    "sync-indexes": "node scripts/sync-indexes.js"
   },
   "keywords": [],
   "author": "",

@@ -190,11 +190,13 @@ bookingSchema.pre('validate', function (next) {
 // Used in double-booking prevention logic in controller
 bookingSchema.index({ property: 1, checkIn: 1, checkOut: 1 });
 
-// Host dashboard: "Show me all bookings for my properties"
-bookingSchema.index({ host: 1, status: 1 });
+// Host dashboard: "Show me all bookings for my properties", newest first.
+// createdAt is in the key so the sort is served from the index instead of
+// an in-memory sort after the filter.
+bookingSchema.index({ host: 1, status: 1, createdAt: -1 });
 
-// Guest dashboard: "Show me all my bookings"
-bookingSchema.index({ guest: 1, status: 1 });
+// Guest dashboard: "Show me all my bookings", newest first.
+bookingSchema.index({ guest: 1, status: 1, createdAt: -1 });
 
 // Payment lookup — used when Stripe webhook fires
 bookingSchema.index({ paymentIntentId: 1 }, { sparse: true });

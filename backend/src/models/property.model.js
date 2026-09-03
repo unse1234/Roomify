@@ -172,9 +172,13 @@ const propertySchema = new Schema(
 // ─── Indexes ─────────────────────────────────────────────────────────────────
 propertySchema.index({ "address.location": "2dsphere" }); // geospatial search
 propertySchema.index({ price: 1 }); // price range filter
-propertySchema.index({ status: 1 }); // active listings filter
 propertySchema.index({ host: 1 }); // host's own listings
 propertySchema.index({ type: 1, status: 1 }); // compound — browse by type
+
+// Home page: active listings, newest first (the most-executed query).
+propertySchema.index({ status: 1, createdAt: -1 });
+// "Top rated" sort over active listings.
+propertySchema.index({ status: 1, averageRating: -1 });
 
 // ─── Virtuals ────────────────────────────────────────────────────────────────
 // Future: reviews will be populated via this virtual
