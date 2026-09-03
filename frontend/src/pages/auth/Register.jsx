@@ -125,8 +125,9 @@ const Register = () => {
         <label className="flex items-start gap-2.5 text-sm text-muted">
           <input type="checkbox" checked={agreedToTerms} onChange={(event) => setAgreedToTerms(event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-primary" />
           <span>
-            I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and{' '}
-            <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+            I agree to the{' '}
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Terms of Service</Link> and{' '}
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Privacy Policy</Link>.
           </span>
         </label>
 

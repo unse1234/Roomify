@@ -15,6 +15,8 @@ import HostPropertiesPage from './pages/HostPropertiesPage.jsx';
 import PropertyFormPage from './pages/PropertyFormPage.jsx';
 import HostBookingsPage from './pages/HostBookingsPage.jsx';
 import WishlistPage from './pages/WishlistPage.jsx';
+import LegalPage from './pages/LegalPage.jsx';
+import NotFoundPage from './pages/NotFoundPage.jsx';
 import OfflineBanner from './components/common/OfflineBanner.jsx';
 
 function App() {
@@ -28,6 +30,8 @@ function App() {
           <Route path="/listings/:id" element={<ListingDetail />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/terms" element={<LegalPage document="terms" />} />
+          <Route path="/privacy" element={<LegalPage document="privacy" />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/wishlist" element={<WishlistPage />} />
             <Route path="/bookings" element={<BookingsPage />} />
@@ -43,6 +47,8 @@ function App() {
             <Route path="/host/properties/:id/edit" element={<PropertyFormPage />} />
             <Route path="/host/bookings" element={<HostBookingsPage />} />
           </Route>
+
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
