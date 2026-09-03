@@ -20,7 +20,9 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: 6,
+      // Real policy (length + complexity) lives in auth.validation.js and is
+      // enforced on new passwords only; existing shorter passwords still work.
+      minlength: 8,
       select: false,
     },
     roles: {
