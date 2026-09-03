@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { loginUser, logoutUser, fetchCurrentUser } from '../services/auth.service.js';
+import { queryClient } from '../lib/queryClient.js';
 
 const AuthContext = createContext(null);
 
@@ -18,20 +19,32 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    const handleAuthExpired = () => setUser(null);
+    const handleAuthExpired = () => {
+      setUser(null);
+      // Drop every cached response from the previous session so the next
+      // user on a shared device cannot see it.
+      queryClient.clear();
+    };
     window.addEventListener('roomify:auth-expired', handleAuthExpired);
     return () => window.removeEventListener('roomify:auth-expired', handleAuthExpired);
   }, []);
 
   const login = async (credentials) => {
     const res = await loginUser(credentials);
+    // Clear anything cached before this login (e.g. a previous session on
+    // this device whose logout was missed) so keys can't collide.
+    queryClient.clear();
     setUser(res.data);
     return res.data;
   };
 
   const logout = async () => {
-    await logoutUser();
-    setUser(null);
+    try {
+      await logoutUser();
+    } finally {
+      setUser(null);
+      queryClient.clear();
+    }
   };
 
   return (
