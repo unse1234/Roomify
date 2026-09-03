@@ -10,6 +10,7 @@ import propertyRoutes from "./routes/property.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
+import configRoutes from "./routes/config.routes.js";
 import { config } from "./config/config.js";
 import { apiLimiter, writeLimiter } from "./middleware/rateLimit.middleware.js";
 import { requestContext, requestLogger } from "./middleware/requestContext.middleware.js";
@@ -87,6 +88,7 @@ app.use("/api/properties", propertyRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/config", configRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

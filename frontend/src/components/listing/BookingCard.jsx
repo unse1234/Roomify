@@ -6,15 +6,16 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { checkAvailability, createBooking } from '../../services/booking.service.js';
 import { getApiErrorMessage } from '../../utils/apiError.js';
 import { formatMoney } from '../../utils/formatters.js';
+import { useAppConfig } from '../../hooks/useAppConfig.js';
 import Button from '../common/Button.jsx';
 
-const SERVICE_FEE_PERCENT = 0.05;
 const today = () => new Date().toISOString().slice(0, 10);
 
 const BookingCard = ({ property }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { serviceFeePercent } = useAppConfig();
 
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
@@ -29,7 +30,7 @@ const BookingCard = ({ property }) => {
   }, [checkIn, checkOut]);
 
   const subtotal = nights * property.price;
-  const serviceFee = Math.round(subtotal * SERVICE_FEE_PERCENT);
+  const serviceFee = Math.round(subtotal * serviceFeePercent);
   const total = subtotal + serviceFee;
   const canCheckAvailability = Boolean(property?._id && checkIn && checkOut && nights > 0);
 
