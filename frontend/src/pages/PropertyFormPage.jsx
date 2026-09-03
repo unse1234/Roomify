@@ -127,11 +127,11 @@ const PropertyFormContent = ({ id, isEdit, initialForm }) => {
   const validateAndSubmit = (event) => {
     event.preventDefault();
     if (!isEdit && files.length === 0) {
-      setApiError({ message: 'Property images are required by the backend.', fieldErrors: {} });
+      setApiError({ message: 'Add at least one photo of your property.', fieldErrors: {} });
       return;
     }
     if (files.length > 10) {
-      setApiError({ message: 'The backend accepts up to 10 property images.', fieldErrors: {} });
+      setApiError({ message: 'You can upload up to 10 photos.', fieldErrors: {} });
       return;
     }
     mutation.mutate();

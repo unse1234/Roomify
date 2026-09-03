@@ -29,7 +29,7 @@ const ReviewsPage = () => {
       <Navbar />
       <PageShell>
         <h1 className="text-2xl font-semibold text-ink">My reviews</h1>
-        <p className="mt-1 text-sm text-muted">Only reviews from completed backend bookings appear here.</p>
+        <p className="mt-1 text-sm text-muted">Reviews you can leave once a stay is complete appear here.</p>
 
         {[updateMutation, deleteMutation].some((mutation) => mutation.isError) && (
           <p className="mt-4 text-sm text-error">{getApiErrorMessage(updateMutation.error || deleteMutation.error, 'Review action failed.')}</p>

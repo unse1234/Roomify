@@ -30,7 +30,7 @@ const HostPropertiesPage = () => {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-ink">Host properties</h1>
-            <p className="mt-1 text-sm text-muted">Manage stays backed by the property API.</p>
+            <p className="mt-1 text-sm text-muted">Create, edit and manage your listings.</p>
           </div>
           <Link to="/host/properties/new" className="btn-primary"><Plus className="h-4 w-4" />Create property</Link>
         </div>
@@ -42,7 +42,7 @@ const HostPropertiesPage = () => {
         ) : propertiesQuery.isError ? (
           <ErrorState message={getApiErrorMessage(propertiesQuery.error, 'Could not load host properties.')} requestId={getApiErrorRequestId(propertiesQuery.error)} onRetry={() => propertiesQuery.refetch()} />
         ) : properties.length === 0 ? (
-          <EmptyState title="No properties yet" message="Create your first Roomify listing with real backend image upload." action={<Link to="/host/properties/new" className="btn-primary">Create property</Link>} />
+          <EmptyState title="No properties yet" message="Create your first Roomify listing and start hosting." action={<Link to="/host/properties/new" className="btn-primary">Create property</Link>} />
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
             {properties.map((property) => {

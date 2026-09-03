@@ -259,7 +259,7 @@ const Home = () => {
                 ))}
               </div>
             ) : properties.length === 0 ? (
-              <EmptyState title="No stays found" message="Try changing the filters that the backend supports." />
+              <EmptyState title="No stays match these filters" message="Try widening your dates, price range or location." />
             ) : (
               <>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">

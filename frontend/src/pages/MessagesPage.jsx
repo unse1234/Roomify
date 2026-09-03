@@ -27,7 +27,7 @@ const MessagesPage = () => {
       <PageShell>
         <h1 className="text-2xl font-semibold text-ink">Inbox</h1>
         <p className="mt-1 text-sm text-muted">
-          Conversation pagination is not exposed by the backend.
+          Your conversations with hosts and guests.
         </p>
 
         <div className="mt-6">

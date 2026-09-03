@@ -56,7 +56,7 @@ const Login = () => {
 
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-ink">Welcome back</h1>
-        <p className="mt-1 text-sm text-muted">Sign in with the backend cookie session flow.</p>
+        <p className="mt-1 text-sm text-muted">Sign in to your Roomify account.</p>
       </div>
 
       {error && <div className="mb-5 rounded-sm border border-[#f3b6a8] bg-[#fff4f1] px-4 py-3 text-sm text-error" role="alert">{error}</div>}

@@ -69,7 +69,7 @@ const BookingsPage = () => {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-ink">My bookings</h1>
-            <p className="mt-1 text-sm text-muted">Bookings come from the Roomify backend.</p>
+            <p className="mt-1 text-sm text-muted">Every stay you&apos;ve requested or booked.</p>
           </div>
           <select className="field max-w-48" value={status} onChange={(event) => setSearchParams(event.target.value ? { status: event.target.value } : {})}>
             {statuses.map((item) => <option key={item || 'all'} value={item}>{item || 'All statuses'}</option>)}

@@ -77,7 +77,7 @@ const Register = () => {
     <AuthLayout
       imageUrl="/images/register.avif"
       heading="Your next place starts here."
-      subheading="Create your Roomify account and start discovering real stays from the backend."
+      subheading="Create your Roomify account and start discovering places to stay."
       features={['Verified properties', 'Secure booking requests', 'Host tools']}
     >
       <div className="mb-4 flex items-center justify-between">
@@ -92,7 +92,7 @@ const Register = () => {
 
       <div className="mb-4">
         <h1 className="text-2xl font-semibold text-ink">Create your account</h1>
-        <p className="mt-1 text-sm text-muted">Choose guest only, or add host access using the backend role contract.</p>
+        <p className="mt-1 text-sm text-muted">Choose guest only, or add host access to list your own place.</p>
       </div>
 
       {error && <div className="mb-4 rounded-sm border border-[#f3b6a8] bg-[#fff4f1] px-4 py-3 text-sm text-error" role="alert">{error}</div>}

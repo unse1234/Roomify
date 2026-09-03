@@ -148,7 +148,7 @@ const BookingCard = ({ property }) => {
       )}
 
       <p className="mt-4 text-center text-xs text-muted-soft">
-        Payment processing is a backend gap. The booking request still uses the real Roomify booking API.
+        You won&apos;t be charged now — you&apos;ll arrange payment with your host after they confirm.
       </p>
     </div>
   );
