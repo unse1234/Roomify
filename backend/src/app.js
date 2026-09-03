@@ -1,6 +1,8 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
 
 import authRoutes from "./routes/auth.routes.js";
 import propertyRoutes from "./routes/property.routes.js";
@@ -14,10 +16,21 @@ import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js"
 
 const app = express();
 
+// Must be first: rate limiting and access logs read req.ip, which is the
+// proxy's address unless Express is told how many proxies sit in front.
+app.set("trust proxy", config.TRUST_PROXY);
+app.disable("x-powered-by");
+
+// Security headers. The API serves JSON only, so the policy can be strict.
+// CORP is relaxed to cross-origin because the SPA is served from a
+// different origin and needs to read these responses.
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
+
 app.use(requestContext);
-app.use(express.json());
-app.use(cookieParser());
-app.use(normalizeErrorResponses);
 
 const allowedOrigins = config.corsOrigins;
 
@@ -34,8 +47,13 @@ app.use(
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
     exposedHeaders: ["X-Request-ID"],
-  })
+  }),
 );
+
+app.use(express.json({ limit: "100kb" }));
+app.use(cookieParser());
+app.use(compression());
+app.use(normalizeErrorResponses);
 app.use(requestLogger);
 
 app.get("/health", (req, res) => {

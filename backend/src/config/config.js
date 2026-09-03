@@ -43,6 +43,12 @@ const schema = z
     // no session breaks on upgrade; a same-site deployment should set this to
     // "lax" to regain the browser's built-in CSRF protection.
     COOKIE_SAMESITE: z.enum(["lax", "strict", "none"]).default("none"),
+
+    // Express "trust proxy" setting. Empty/"false" => no proxy trusted;
+    // "true" => trust all; a number => that many proxy hops; otherwise the
+    // literal value (e.g. "loopback"). Must match the deployment topology or
+    // per-IP rate limiting buckets every client behind the load balancer.
+    TRUST_PROXY: z.string().trim().default(""),
   });
 
 const parsed = schema.safeParse(process.env);
@@ -76,6 +82,14 @@ if (env.NODE_ENV === "production" && !explicitWebOrigin) {
  */
 const corsOrigins = Array.from(new Set([webOrigin, "http://localhost:5173"]));
 
+const parseTrustProxy = (raw) => {
+  const value = (raw || "").toLowerCase();
+  if (value === "" || value === "false" || value === "0") return false;
+  if (value === "true") return true;
+  if (/^\d+$/.test(value)) return Number(value);
+  return raw;
+};
+
 export const config = Object.freeze({
   NODE_ENV: env.NODE_ENV,
   isProduction: env.NODE_ENV === "production",
@@ -90,6 +104,7 @@ export const config = Object.freeze({
   corsOrigins,
 
   COOKIE_SAMESITE: env.COOKIE_SAMESITE,
+  TRUST_PROXY: parseTrustProxy(env.TRUST_PROXY),
 
   IMAGEKIT: {
     publicKey: env.IMAGEKIT_PUBLIC_KEY,
