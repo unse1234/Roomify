@@ -196,9 +196,14 @@ export const getAllProperties = async (req, res) => {
 };
 
 export const getPropertyById = async (req, res) => {
-  const property = await Property.findById(req.params.id)
-    .populate("host", "name email")
-    .populate("reviews");
+  // Reviews are intentionally NOT populated here: the `reviews` virtual has no
+  // isVisible filter, so it would expose moderator-hidden reviews on this
+  // public endpoint, and it is unbounded. The client reads reviews from the
+  // paginated GET /api/reviews/property/:id endpoint, which filters correctly.
+  const property = await Property.findById(req.params.id).populate(
+    "host",
+    "name email",
+  );
 
   if (!property) {
     return res.status(404).json({ message: "Property not found" });
