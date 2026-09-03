@@ -7,6 +7,7 @@ import propertyRoutes from "./routes/property.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
+import { config } from "./config/config.js";
 import { requestContext, requestLogger } from "./middleware/requestContext.middleware.js";
 import { normalizeErrorResponses } from "./middleware/errorResponse.middleware.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
@@ -18,10 +19,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(normalizeErrorResponses);
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+const allowedOrigins = config.corsOrigins;
 
 app.use(
   cors({

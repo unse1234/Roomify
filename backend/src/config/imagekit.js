@@ -1,9 +1,10 @@
 import ImageKit from 'imagekit';
+import { config } from './config.js';
 
 const imagekit = new ImageKit({
-  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
-  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+  publicKey: config.IMAGEKIT.publicKey,
+  privateKey: config.IMAGEKIT.privateKey,
+  urlEndpoint: config.IMAGEKIT.urlEndpoint,
 });
 
 export default imagekit;

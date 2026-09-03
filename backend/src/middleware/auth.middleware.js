@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/users.model.js";
+import { config } from "../config/config.js";
 import { unauthenticated } from "../errors/AppError.js";
 import { ERROR_CODES } from "../errors/errorCodes.js";
 
@@ -11,7 +12,7 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, config.JWT_SECRET);
 
     req.user = await User.findById(decoded.id);
 

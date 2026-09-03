@@ -4,8 +4,10 @@ dotenv.config();
 import http from "http";
 
 const { default: app } = await import("./src/app.js");
+const { config } = await import("./src/config/config.js");
 const { default: connectDB } = await import("./src/config/database.js");
 const { initializeSocket } = await import("./src/socket/chat.socket.js");
+const { logger } = await import("./src/utils/logger.js");
 
 await connectDB();
 
@@ -15,14 +17,6 @@ await connectDB();
 const httpServer = http.createServer(app);
 initializeSocket(httpServer);
 
-const PORT = process.env.PORT || 3000;
-
-httpServer.listen(PORT, () => {
-  console.log(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    level: "info",
-    event: "server_started",
-    port: PORT,
-    environment: process.env.NODE_ENV || "development",
-  }));
+httpServer.listen(config.PORT, () => {
+  logger.info("server_started", { port: config.PORT });
 });

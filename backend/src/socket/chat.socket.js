@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import * as cookie from "cookie";
 import User from "../models/users.model.js";
+import { config } from "../config/config.js";
 import { Conversation } from "../models/chat.model.js";
 import { logger } from "../utils/logger.js";
 let io;
@@ -16,7 +17,7 @@ const getConversationId = (payload) =>
 export const initializeSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || process.env.CLIENT_URL,
+      origin: config.corsOrigins,
       credentials: true,
     },
   });
@@ -32,7 +33,7 @@ export const initializeSocket = (httpServer) => {
       const { jwt: token } = cookie.parse(rawCookies);
       if (!token) return next(new Error("Authentication required"));
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, config.JWT_SECRET);
       const user = await User.findById(decoded.id).select("_id").lean();
       if (!user) return next(new Error("Authentication failed"));
 
