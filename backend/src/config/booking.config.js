@@ -21,6 +21,10 @@ export const BOOKING_CONFIG = {
 
   // Maximum stay duration (nights)
   MAX_NIGHTS: 90,
+
+  // A pending request that a host hasn't answered within this window is
+  // auto-cancelled by the scheduler, freeing the dates. Industry norm 24-48h.
+  PENDING_HOLD_HOURS: 48,
 };
 
 export const BOOKING_STATUS = {

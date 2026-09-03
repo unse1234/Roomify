@@ -8,9 +8,11 @@ const { default: app } = await import("./src/app.js");
 const { config } = await import("./src/config/config.js");
 const { default: connectDB } = await import("./src/config/database.js");
 const { initializeSocket } = await import("./src/socket/chat.socket.js");
+const { startBookingJobs } = await import("./src/jobs/bookingLifecycle.js");
 const { logger } = await import("./src/utils/logger.js");
 
 await connectDB();
+startBookingJobs();
 
 // Socket.io needs the raw HTTP server (not the Express app) because
 // it upgrades HTTP connections to WebSocket connections directly.
