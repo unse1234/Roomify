@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
@@ -57,10 +58,22 @@ app.use(compression());
 app.use(normalizeErrorResponses);
 app.use(requestLogger);
 
+// Liveness: is the process up. Never touches dependencies.
 app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Roomify API is running",
+  });
+});
+
+// Readiness: can the process actually serve traffic. Gate deploy traffic
+// on this, not /health, so an instance with an unusable database is not
+// sent requests.
+app.get("/ready", (req, res) => {
+  const dbReady = mongoose.connection.readyState === 1;
+  res.status(dbReady ? 200 : 503).json({
+    success: dbReady,
+    checks: { database: dbReady ? "ok" : "unavailable" },
   });
 });
 
