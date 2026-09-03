@@ -15,24 +15,6 @@ const isOwnerOrAdmin = (property, user) =>
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const parseMaybeJson = (value) => {
-  if (typeof value !== "string") return value;
-  return JSON.parse(value);
-};
-
-const buildPropertyUpdate = (body) => {
-  const update = { ...body };
-  ["host", "averageRating", "totalReviews", "status", "images"].forEach(
-    (field) => delete update[field],
-  );
-
-  if (update.area) update.area = parseMaybeJson(update.area);
-  if (update.address) update.address = parseMaybeJson(update.address);
-  if (update.amenities) update.amenities = parseMaybeJson(update.amenities);
-
-  return update;
-};
-
 const cleanupImages = (images, event, propertyId) => {
   if (!images?.length) return;
 
@@ -46,6 +28,8 @@ const cleanupImages = (images, event, propertyId) => {
 };
 
 export const createProperty = async (req, res) => {
+  // Validation (validate(createPropertySchema)) has already run, so a bad
+  // payload is rejected here — before any image is uploaded and billed.
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ message: "At least one image is required" });
   }
@@ -53,41 +37,13 @@ export const createProperty = async (req, res) => {
   const images = await uploadImagesToImageKit(req.files);
 
   try {
-    const {
-      title,
-      description,
-      type,
-      price,
-      currency,
-      bedrooms,
-      bathrooms,
-      maxGuests,
-    } = req.body;
-
-    const area = req.body.area ? JSON.parse(req.body.area) : undefined;
-    const address = req.body.address ? JSON.parse(req.body.address) : undefined;
-    const amenities = req.body.amenities ? JSON.parse(req.body.amenities) : [];
-
     const property = await Property.create({
-      title,
-      description,
-      type,
-      price,
-      currency,
-      bedrooms,
-      bathrooms,
-      area,
-      maxGuests,
-      amenities,
-      address,
+      ...req.body,
       images,
       host: req.user._id,
     });
 
-    res.status(201).json({
-      success: true,
-      data: property,
-    });
+    res.status(201).json({ success: true, data: property });
   } catch (error) {
     cleanupImages(images, "property_image_upload_cleanup_failed", req.user._id);
     throw error;
@@ -225,7 +181,9 @@ export const updateProperty = async (req, res) => {
       .json({ message: "Not authorized to update this property" });
   }
 
-  const update = buildPropertyUpdate(req.body);
+  // req.body is the validated, allowlisted update — unknown keys (host,
+  // status, bookingLockToken, ...) were stripped by the schema.
+  const update = { ...req.body };
   let replacementImages = null;
 
   if (req.files?.length) {

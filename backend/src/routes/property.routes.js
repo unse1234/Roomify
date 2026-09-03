@@ -15,7 +15,11 @@ import protect from "../middleware/auth.middleware.js";
 import authorize from "../middleware/role.middleware.js";
 import upload from "../middleware/upload.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
-import { listPropertiesQuerySchema } from "../validations/property.validation.js";
+import {
+  listPropertiesQuerySchema,
+  createPropertySchema,
+  updatePropertySchema,
+} from "../validations/property.validation.js";
 const router = express.Router();
 
 router.post(
@@ -23,6 +27,7 @@ router.post(
   protect,
   authorize("host"),
   upload.array("images", 10),
+  validate(createPropertySchema),
   createProperty,
 );
 
@@ -31,6 +36,7 @@ router.patch(
   protect,
   authorize("host", "admin"),
   upload.array("images", 10),
+  validate(updatePropertySchema),
   updateProperty,
 );
 
