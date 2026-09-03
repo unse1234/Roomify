@@ -14,6 +14,8 @@ import {
 import protect from "../middleware/auth.middleware.js";
 import authorize from "../middleware/role.middleware.js";
 import upload from "../middleware/upload.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import { listPropertiesQuerySchema } from "../validations/property.validation.js";
 const router = express.Router();
 
 router.post(
@@ -43,6 +45,6 @@ router.get(
 router.get("/wishlist", protect, getWishlist);
 router.put("/:id/wishlist", protect, addToWishlist);
 router.delete("/:id/wishlist", protect, removeFromWishlist);
-router.get("/", getAllProperties);
+router.get("/", validate(listPropertiesQuerySchema, "query"), getAllProperties);
 router.get("/:id", getPropertyById);
 export default router;
