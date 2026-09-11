@@ -14,11 +14,14 @@ const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
 const rejectOverLimit = (req, res, next) => next(rateLimited());
 
+const skip = () => config.DISABLE_RATE_LIMITING;
+
 const base = {
   windowMs: FIFTEEN_MINUTES,
   standardHeaders: true,
   legacyHeaders: false,
   handler: rejectOverLimit,
+  skip,
   // In development there is no proxy; skip the header-vs-trust-proxy check
   // that would otherwise log a warning on every request.
   validate: config.isProduction ? undefined : { trustProxy: false, xForwardedForHeader: false },

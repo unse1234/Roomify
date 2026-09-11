@@ -49,6 +49,9 @@ const schema = z
     // literal value (e.g. "loopback"). Must match the deployment topology or
     // per-IP rate limiting buckets every client behind the load balancer.
     TRUST_PROXY: z.string().trim().default(""),
+
+    // Disable rate limiting for load testing purposes.
+    DISABLE_RATE_LIMITING: z.enum(["true", "false"]).default("false"),
   });
 
 const parsed = schema.safeParse(process.env);
@@ -103,6 +106,7 @@ export const config = Object.freeze({
 
   COOKIE_SAMESITE: env.COOKIE_SAMESITE,
   TRUST_PROXY: parseTrustProxy(env.TRUST_PROXY),
+  DISABLE_RATE_LIMITING: env.DISABLE_RATE_LIMITING === "true",
 
   IMAGEKIT: {
     publicKey: env.IMAGEKIT_PUBLIC_KEY,
