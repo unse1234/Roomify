@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { config } from "./config.js";
 import { logger } from "../utils/logger.js";
+import { instrumentPool } from "../utils/perf.js";
 
 /**
  * Booking, review and chat writes use multi-document transactions, which
@@ -37,10 +38,11 @@ async function connectDB() {
     await mongoose.connect(config.MONGODB_URI, {
       serverSelectionTimeoutMS: 10_000,
       socketTimeoutMS: 45_000,
-      maxPoolSize: 20,
-      minPoolSize: 2,
+      maxPoolSize: config.MONGO_MAX_POOL_SIZE,
+      minPoolSize: config.MONGO_MIN_POOL_SIZE,
     });
     logger.info("database_connected");
+    instrumentPool(mongoose.connection.getClient());
     await verifyTransactionSupport();
   } catch (error) {
     logger.fatal("database_connection_failed", {

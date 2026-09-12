@@ -16,6 +16,13 @@ import { apiLimiter, writeLimiter } from "./middleware/rateLimit.middleware.js";
 import { requestContext, requestLogger } from "./middleware/requestContext.middleware.js";
 import { normalizeErrorResponses } from "./middleware/errorResponse.middleware.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
+import {
+  PERF_ENABLED,
+  perfRequestCounter,
+  perfSnapshot,
+  measureMongoPing,
+  collectCpuProfile,
+} from "./utils/perf.js";
 
 const app = express();
 
@@ -32,6 +39,10 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
+
+// Diagnostics only. PERF_DIAGNOSTICS defaults to false, so this adds
+// nothing to the production request path unless explicitly switched on.
+if (PERF_ENABLED) app.use(perfRequestCounter);
 
 app.use(requestContext);
 
@@ -77,6 +88,43 @@ app.get("/ready", (req, res) => {
     checks: { database: dbReady ? "ok" : "unavailable" },
   });
 });
+
+// Profiling snapshot: event-loop delay, CPU used, cgroup CPU quota and
+// throttling counters, Mongo pool saturation. Mounted only while
+// PERF_DIAGNOSTICS is on so it can never leak in normal operation.
+if (PERF_ENABLED) {
+  // These endpoints describe the process, not the business data, but a
+  // deployment is usually publicly reachable — so gate them on a shared
+  // secret when one is configured, and make the profiler unavailable
+  // without it (collecting a profile is itself a load).
+  const authorizeDiagnostics = (req, res) => {
+    const expected = config.PERF_DIAGNOSTICS_TOKEN;
+    if (!expected) return true;
+    if (req.query.token === expected) return true;
+    res.status(404).json({ message: "Not found" });
+    return false;
+  };
+
+  app.get("/__perf", async (req, res) => {
+    if (!authorizeDiagnostics(req, res)) return;
+    const snapshot = perfSnapshot(mongoose);
+    if (req.query.ping === "1") {
+      snapshot.mongoPing = await measureMongoPing(mongoose);
+    }
+    res.status(200).json(snapshot);
+  });
+
+  app.get("/__perf/profile", async (req, res) => {
+    if (!authorizeDiagnostics(req, res)) return;
+    const seconds = Math.min(Number(req.query.seconds) || 15, 60);
+    try {
+      const profile = await collectCpuProfile(seconds);
+      res.status(200).json(profile);
+    } catch (error) {
+      res.status(409).json({ message: error.message });
+    }
+  });
+}
 
 // Coarse global ceiling, then a stricter ceiling on writes. Auth routes add
 // their own stricter limiter on top.

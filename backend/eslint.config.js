@@ -29,5 +29,18 @@ export default [
     files: ["src/tests/**/*.js", "scripts/**/*.js", "src/utils/logger.js"],
     rules: { "no-console": "off" },
   },
+  {
+    // k6 load scripts run inside the k6 runtime, not Node: they import from
+    // k6/* and read the runner's __ENV / __VU / __ITER globals.
+    files: ["scripts/perf/bench.js", "scripts/*load-test.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        __ENV: "readonly",
+        __VU: "readonly",
+        __ITER: "readonly",
+      },
+    },
+  },
   prettier,
 ];

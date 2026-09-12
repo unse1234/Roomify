@@ -52,6 +52,25 @@ const schema = z
 
     // Disable rate limiting for load testing purposes.
     DISABLE_RATE_LIMITING: z.enum(["true", "false"]).default("false"),
+
+    // MongoDB connection pool. The ceiling on concurrent database work is
+    // maxPoolSize / (round-trip time + server execution time), so the right
+    // value depends on how far the app is deployed from the cluster. Left
+    // configurable rather than hard-coded so it can be tuned per
+    // environment without a code change — see docs/performance.md.
+    MONGO_MAX_POOL_SIZE: z.coerce.number().int().min(1).max(500).default(20),
+    MONGO_MIN_POOL_SIZE: z.coerce.number().int().min(0).max(100).default(2),
+
+    // Temporary performance diagnostics: Server-Timing headers on the
+    // property search plus a GET /__perf snapshot (event-loop delay, CPU,
+    // cgroup quota/throttling, Mongo pool). Off by default — turn it on
+    // only while profiling, never as a standing production setting.
+    PERF_DIAGNOSTICS: z.enum(["true", "false"]).default("false"),
+
+    // Optional shared secret for the diagnostics endpoints. If set, /__perf
+    // requires ?token=<value>. Strongly recommended whenever diagnostics are
+    // enabled on a publicly reachable deployment.
+    PERF_DIAGNOSTICS_TOKEN: z.string().trim().min(8).optional(),
   });
 
 const parsed = schema.safeParse(process.env);
@@ -107,6 +126,11 @@ export const config = Object.freeze({
   COOKIE_SAMESITE: env.COOKIE_SAMESITE,
   TRUST_PROXY: parseTrustProxy(env.TRUST_PROXY),
   DISABLE_RATE_LIMITING: env.DISABLE_RATE_LIMITING === "true",
+  PERF_DIAGNOSTICS: env.PERF_DIAGNOSTICS === "true",
+  PERF_DIAGNOSTICS_TOKEN: env.PERF_DIAGNOSTICS_TOKEN || null,
+
+  MONGO_MAX_POOL_SIZE: env.MONGO_MAX_POOL_SIZE,
+  MONGO_MIN_POOL_SIZE: Math.min(env.MONGO_MIN_POOL_SIZE, env.MONGO_MAX_POOL_SIZE),
 
   IMAGEKIT: {
     publicKey: env.IMAGEKIT_PUBLIC_KEY,

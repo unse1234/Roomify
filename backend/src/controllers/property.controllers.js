@@ -1,4 +1,5 @@
 ﻿// controllers/property.controller.js
+import { performance } from "node:perf_hooks";
 import Property, {
   PROPERTY_TYPES,
   PROPERTY_STATUS,
@@ -9,11 +10,21 @@ import {
   deleteImagesFromImageKit,
 } from "../utils/imagekit.utils.js";
 import { logger } from "../utils/logger.js";
+import { startPerf } from "../utils/perf.js";
 
 const isOwnerOrAdmin = (property, user) =>
   property.host.toString() === user._id.toString() || user.hasRole("admin");
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Sphere radius MongoDB uses for spherical 2dsphere queries. $geoNear takes
+// maxDistance in meters; $centerSphere takes a radius in radians, so the two
+// only agree on the same set of documents if they are converted with this.
+const EARTH_RADIUS_METERS = 6_378_100;
+
+// Marker field on the row that carries the result count, so it can be told
+// apart from property documents without relying on its position.
+const TOTAL_FIELD = "__total";
 
 const cleanupImages = (images, event, propertyId) => {
   if (!images?.length) return;
@@ -51,6 +62,9 @@ export const createProperty = async (req, res) => {
 };
 
 export const getAllProperties = async (req, res) => {
+  // No-op object unless PERF_DIAGNOSTICS=true.
+  const perf = startPerf();
+
   const {
     lng,
     lat,
@@ -103,32 +117,74 @@ export const getAllProperties = async (req, res) => {
   let properties;
   let total;
 
+  perf.mark("filter-build");
+
   if (lng && lat) {
+    // Why this is not a $facet:
+    //
+    // Inside a $facet the count branch consumes every match, so the planner
+    // cannot push the page's $limit down into $geoNear — the stage has to
+    // fetch and distance-rank every candidate inside the radius. Measured on
+    // a 15k-property corpus (scripts/perf/compare-pipelines.js): 19,028
+    // documents examined and ~76ms of server time to return 12 rows.
+    //
+    // With the page as its own stream the $limit *is* pushed into $geoNear,
+    // which stops as soon as the page is full: 4,190 documents examined,
+    // ~21ms. The count moves to a $geoWithin match, which answers from the
+    // 2dsphere index without computing distances (386 examined, ~6ms).
+    //
+    // $unionWith keeps both in ONE round trip on ONE pooled connection.
+    // Running them as two parallel queries is marginally faster in isolation
+    // but doubles connection-hold time per request, which costs more than it
+    // saves once the pool is the scarce resource.
+    const center = [Number(lng), Number(lat)];
     const pipeline = [
       {
         $geoNear: {
-          near: { type: "Point", coordinates: [Number(lng), Number(lat)] },
+          near: { type: "Point", coordinates: center },
           distanceField: "distance",
           maxDistance: Number(radius),
           spherical: true,
           query: filter,
         },
       },
+      // $geoNear already emits in ascending-distance order, so the page is
+      // the first skip+limit rows; no separate $sort is needed.
+      { $limit: skip + Number(limit) },
+      { $skip: skip },
       {
-        $facet: {
-          data: [
-            { $sort: { distance: 1 } },
-            { $skip: skip },
-            { $limit: Number(limit) },
+        $unionWith: {
+          coll: Property.collection.collectionName,
+          pipeline: [
+            {
+              $match: {
+                ...filter,
+                "address.location": {
+                  $geoWithin: {
+                    $centerSphere: [center, Number(radius) / EARTH_RADIUS_METERS],
+                  },
+                },
+              },
+            },
+            { $count: TOTAL_FIELD },
           ],
-          metadata: [{ $count: "total" }],
         },
       },
     ];
 
-    const [geoResult] = await Property.aggregate(pipeline);
-    properties = geoResult?.data || [];
-    total = geoResult?.metadata[0]?.total || 0;
+    const mongoStart = perf.enabled ? performance.now() : 0;
+    const rows = await Property.aggregate(pipeline);
+    if (perf.enabled) perf.recordMongo(performance.now() - mongoStart);
+    perf.mark("mongodb");
+
+    // $unionWith does not promise an output order, so the count row is found
+    // by its marker field rather than its position, and the page is ordered
+    // here. That sort is over at most `limit` rows, so it is free — unlike
+    // the $sort it replaces, which the server applied to the whole match set.
+    properties = rows
+      .filter((row) => row[TOTAL_FIELD] === undefined)
+      .sort((a, b) => a.distance - b.distance);
+    total = rows.find((row) => row[TOTAL_FIELD] !== undefined)?.[TOTAL_FIELD] || 0;
   } else {
     [properties, total] = await Promise.all([
       Property.find(filter)
@@ -139,16 +195,21 @@ export const getAllProperties = async (req, res) => {
         .lean(),
       Property.countDocuments(filter),
     ]);
+    perf.mark("mongodb");
   }
 
-  res.status(200).json({
+  const payload = {
     success: true,
     total,
     page: Number(page),
     totalPages: Math.ceil(total / Number(limit)),
     count: properties.length,
     data: properties,
-  });
+  };
+
+  if (perf.enabled) return perf.send(res, payload);
+
+  res.status(200).json(payload);
 };
 
 export const getPropertyById = async (req, res) => {
